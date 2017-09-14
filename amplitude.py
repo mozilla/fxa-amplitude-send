@@ -19,6 +19,14 @@ def transform(line):
             user_id_hmac = hmac.new(HMAC_KEY, event["user_id"], hashlib.sha256)
             event["user_id"] = user_id_hmac.hexdigest()
 
+        insert_id_hmac = hmac.new(HMAC_KEY, hashlib.sha256)
+        insert_id_hmac.update(event["user_id"])
+        insert_id_hmac.update(event["device_id"])
+        insert_id_hmac.update(event["session_id"])
+        insert_id_hmac.update(event["event_type"])
+        insert_id_hmac.update(event["time"])
+        event["insert_id"] = insert_id_hmac.hexdigest()
+
         response = requests.post("https://api.amplitude.com/httpapi",
                                  data={"api_key": API_KEY, "event": json.dumps((event))})
 
