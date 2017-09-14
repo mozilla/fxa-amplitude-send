@@ -16,11 +16,8 @@ def transform(line):
         assert("user_id" in event or "device_id" in event)
 
         if "user_id" in event:
-            assert(event["user_id"] == event["user_properties"]["fxa_uid"])
-
             user_id_hmac = hmac.new(HMAC_KEY, event["user_id"], hashlib.sha256)
             event["user_id"] = user_id_hmac.hexdigest()
-            event["user_properties"]["fxa_uid"] = event["user_id"]
 
         response = requests.post("https://api.amplitude.com/httpapi",
                                  data={"api_key": API_KEY, "event": json.dumps((event))})
