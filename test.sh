@@ -16,9 +16,7 @@ while read -r EVENT || [[ -n "$EVENT" ]]; do
   TIME=`expr $TIME + 1000`
 done < ./fixtures.txt
 
-export FXA_AMPLITUDE_HMAC_KEY="foo"
-export FXA_AWS_ACCESS_KEY="bar"
-export FXA_AWS_SECRET_KEY="baz"
+export FXA_AMPLITUDE_HMAC_KEY="wibble"
 
 ./build/bin/python amplitude.py "$EVENTS"
 

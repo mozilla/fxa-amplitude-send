@@ -9,8 +9,6 @@ import sys
 from threading import Timer
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
-AWS_ACCESS_KEY = os.environ["FXA_AWS_ACCESS_KEY"]
-AWS_SECRET_KEY = os.environ["FXA_AWS_SECRET_KEY"]
 HMAC_KEY = os.environ["FXA_AMPLITUDE_HMAC_KEY"]
 
 # For crude pre-emptive rate-limit obedience.
