@@ -1,4 +1,4 @@
-import boto.s3
+import boto3
 import hashlib
 import hmac
 import json
@@ -23,11 +23,10 @@ def handle (message):
         if record["eventSource"] != "aws:s3":
             continue
 
-        aws_region = boto.s3.connect_to_region(record["awsRegion"])
-        s3_bucket = aws_region.get_bucket(record["s3"]["bucket"]["name"])
-        s3_object = s3_bucket.get_key(record["s3"]["object"]["key"])
+        s3 = boto3.resource("s3", region_name=record["awsRegion"])
+        s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
-        send(s3_object.get_contents_as_string().splitlines())
+        send(s3_object.get()["Body"].read().decode("utf-8").splitlines())
 
 def send (events):
     batch = []
