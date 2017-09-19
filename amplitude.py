@@ -18,17 +18,14 @@ MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 def handle (message):
     # http://docs.aws.amazon.com/AmazonS3/latest/dev/notification-content-structure.html
     records = json.loads(message)["Records"]
+    for record in records:
+        if record["eventSource"] != "aws:s3":
+            continue
 
-    assert(len(records) == 1)
+        s3 = boto3.resource("s3", region_name=record["awsRegion"])
+        s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
-    record = records[0]
-    if record["eventSource"] != "aws:s3":
-        return
-
-    s3 = boto3.resource("s3", region_name=record["awsRegion"])
-    s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
-
-    send(s3_object.get()["Body"].read().decode("utf-8"))
+        send(s3_object.get()["Body"].read().decode("utf-8"))
 
 def process (events):
     batch = []
