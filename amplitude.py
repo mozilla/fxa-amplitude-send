@@ -80,6 +80,6 @@ def send (batch):
 
 send.batch_time = 0
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     process(sys.argv[1])
 
