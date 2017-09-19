@@ -35,7 +35,7 @@ def send (events):
     batch = []
 
     while len(batch) < MAX_EVENTS_PER_BATCH and len(events) > 0:
-        event = json.loads(events.pop(0))
+        event = json.loads(events.pop())
 
         # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
         assert("device_id" in event or "user_id" in event)
