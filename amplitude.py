@@ -72,10 +72,9 @@ def send (batch):
     response = requests.post("https://api.amplitude.com/httpapi",
                              data={"api_key": AMPLITUDE_API_KEY, "event": json.dumps(batch)})
 
-    if response.status_code >= 400:
-        # For want of a better error-handling mechanism,
-        # one failed request fails an entire dump from S3.
-        raise RuntimeError("HTTP {} response")
+    # For want of a better error-handling mechanism,
+    # one failed request fails an entire dump from S3.
+    response.raise_for_status()
 
     send.batch_time = time.time()
 
