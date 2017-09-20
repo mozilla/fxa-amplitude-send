@@ -34,6 +34,7 @@ def process (events):
         event = json.loads(event_string)
 
         # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
+        # TODO: Long-term we probably want to ignore malformed events rather than fail
         assert("device_id" in event or "user_id" in event)
         assert("event_type" in event)
         assert("time" in event)
