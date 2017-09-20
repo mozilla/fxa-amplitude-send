@@ -18,5 +18,5 @@ done < ./fixtures.txt
 
 export FXA_AMPLITUDE_HMAC_KEY="wibble"
 
-./build/bin/python amplitude.py "$EVENTS"
+./build/bin/python amplitude.py <<< "$EVENTS"
 

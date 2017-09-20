@@ -82,5 +82,13 @@ def send (batch):
 send.batch_time = 0
 
 if __name__ == "__main__":
-    process(sys.argv[1])
+    argc = len(sys.argv)
+    if argc == 1:
+        events = sys.stdin.read()
+    elif argc == 2:
+        events = sys.argv[1]
+    else:
+        sys.exit("Usage: {} <events>".format(sys.argv[0]))
+
+    process(events)
 
