@@ -66,8 +66,10 @@ def process (events):
 def send (batch):
     batch_interval = time.time() - send.batch_time
     if batch_interval < MIN_BATCH_INTERVAL:
+        print "sleeping", MIN_BATCH_INTERVAL - batch_interval
         time.sleep(MIN_BATCH_INTERVAL - batch_interval)
 
+    print "sending", len(batch)
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#request-format
     response = requests.post("https://api.amplitude.com/httpapi",
                              data={"api_key": AMPLITUDE_API_KEY, "event": json.dumps(batch)})
