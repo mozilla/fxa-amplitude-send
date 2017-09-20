@@ -58,6 +58,7 @@ def process (events):
         batch.append(event)
         if len(batch) == MAX_EVENTS_PER_BATCH:
             send(batch)
+            batch = []
 
     if len(batch) > 0:
         send(batch)
