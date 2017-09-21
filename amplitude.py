@@ -26,16 +26,21 @@ def handle (message):
         s3 = boto3.resource("s3", region_name=record["awsRegion"])
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
-        events = ""
-        batch = []
-        for chunk in decompress(s3_object):
-            events += chunk
-            partitioned_events = partition_available_events(events)
-            if is_partitioned(partitioned_events):
-                events = partitioned_events[2]
-                batch = process(partitioned_events[0], batch, False)
+        # This will fail if the data is not compressed.
+        process_compressed(s3_object)
 
-        process(events, batch)
+def process_compressed (data):
+    events = ""
+    batch = []
+
+    for chunk in decompress(data):
+        events += chunk
+        partitioned_events = partition_available_events(events)
+        if is_partitioned(partitioned_events):
+            events = partitioned_events[2]
+            batch = process(partitioned_events[0], batch, False)
+
+    process(events, batch)
 
 def decompress (s3_object):
     decompressor = zlib.decompressobj(32 + zlib.MAX_WBITS)
@@ -115,11 +120,10 @@ send.batch_time = 0
 if __name__ == "__main__":
     argc = len(sys.argv)
     if argc == 1:
-        events = sys.stdin.read()
+        process(sys.stdin.read())
     elif argc == 2:
-        events = sys.argv[1]
+        with open(sys.argv[1]) as f:
+            process_compressed(f)
     else:
-        sys.exit("Usage: {} <events>".format(sys.argv[0]))
-
-    process(events)
+        sys.exit("Usage: {} <path-to-gzipped-log-file>\nOR pipe uncompressed logs via stdin".format(sys.argv[0]))
 
