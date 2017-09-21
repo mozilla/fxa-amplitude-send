@@ -38,7 +38,7 @@ def handle (message):
         process(events, batch)
 
 def decompress (s3_object):
-    decompressor = zlib.decompressobj(0)
+    decompressor = zlib.decompressobj(32 + zlib.MAX_WBITS)
     for chunk in s3_object:
         decompressed = decompressor.decompress(chunk)
         if decompressed:
