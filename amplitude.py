@@ -33,9 +33,9 @@ def handle (message):
             partitioned_events = partition_available_events(events)
             if is_partitioned(partitioned_events):
                 events = partitioned_events[2]
-                batch = send(partitioned_events[0], batch, False)
+                batch = process(partitioned_events[0], batch, False)
 
-        send(events, batch)
+        process(events, batch)
 
 def decompress (s3_object):
     decompressor = zlib.decompressobj(0)
@@ -44,13 +44,13 @@ def decompress (s3_object):
         if decompressed:
             yield decompressed
 
-def partition_available_events (data):
-    result = string.rpartition("\n")
+def partition_available_events (events):
+    partitioned_events = events.rpartition("\n")
 
-    if not is_partitioned(result):
-        result = string.rpartition("\r")
+    if not is_partitioned(partitioned_events):
+        partitioned_events = events.rpartition("\r")
 
-    return result
+    return partitioned_events
 
 def is_partitioned (partition):
     return partition[1] != ""
