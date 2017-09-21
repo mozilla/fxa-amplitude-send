@@ -62,7 +62,7 @@ def is_partitioned (partition):
 
 def process (events, batch = [], is_last_call = True):
     for event_string in events.splitlines():
-        event = json.loads(event_string)
+        event = json.loads(event_string)["Fields"]
 
         print "event", event
 
