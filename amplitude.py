@@ -62,7 +62,20 @@ def is_partitioned (partition):
 
 def process (events, batch = [], is_last_call = True):
     for event_string in events.splitlines():
-        event = json.loads(event_string)["Fields"]
+        event = json.loads(event_string)
+
+        if "Fields" in event:
+            # Auth server events are wrapped inside a `Fields` property.
+            event = event["Fields"]
+            if "op" in event and "data" in event:
+                # Mailer events have an extra layer of indirection.
+                event = json.loads(event["data"])
+            else:
+                # Non-mailer events have stringified `event_properties` and `user_properties`.
+                if "event_properties" in event:
+                    event["event_properties"] = json.loads(event["event_properties"])
+                if "user_properties" in event:
+                    event["user_properties"] = json.loads(event["user_properties"])
 
         if not is_event_ok(event):
             print "skipping malformed event", event
