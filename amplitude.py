@@ -16,6 +16,10 @@ MAX_EVENTS_PER_BATCH = 10
 MAX_BATCHES_PER_SECOND = 100
 MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 
+# Cargo-culted from the internet. zlib >= 1.2.3.5 apparently supports
+# specifying wbits=0 but that didn't work for me locally. This did.
+ZLIB_HEADER_SIZE = 32
+
 def handle (message):
     # http://docs.aws.amazon.com/AmazonS3/latest/dev/notification-content-structure.html
     records = json.loads(message)["Records"]
@@ -43,7 +47,7 @@ def process_compressed (data):
     process(events, batch)
 
 def decompress (s3_object):
-    decompressor = zlib.decompressobj(32 + zlib.MAX_WBITS)
+    decompressor = zlib.decompressobj(ZLIB_HEADER_SIZE + zlib.MAX_WBITS)
     for chunk in s3_object:
         decompressed = decompressor.decompress(chunk)
         if decompressed:
