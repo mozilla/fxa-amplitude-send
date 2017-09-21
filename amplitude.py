@@ -6,6 +6,7 @@ import os
 import requests
 import sys
 import time
+import zlib
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
 HMAC_KEY = os.environ["FXA_AMPLITUDE_HMAC_KEY"]
@@ -25,7 +26,18 @@ def handle (message):
         s3 = boto3.resource("s3", region_name=record["awsRegion"])
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
-        send(s3_object.get()["Body"].read().decode("utf-8"))
+        events = ""
+        for chunk in decompress(s3_object):
+            events += chunk
+
+        send(events)
+
+def decompress (s3_object):
+    decompressor = zlib.decompressobj(0)
+    for chunk in s3_object:
+        decompressed = decompressor.decompress(chunk)
+        if decompressed:
+            yield decompressed
 
 def process (events):
     batch = []
