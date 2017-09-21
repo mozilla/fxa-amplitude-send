@@ -64,6 +64,8 @@ def process (events, batch = [], is_last_call = True):
     for event_string in events.splitlines():
         event = json.loads(event_string)
 
+        print "event", event
+
         # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
         # TODO: Long-term we probably want to ignore malformed events rather than fail
         assert("device_id" in event or "user_id" in event)
