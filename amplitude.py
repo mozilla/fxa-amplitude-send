@@ -27,14 +27,15 @@ def handle (message):
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
         events = ""
+        batch = []
         for chunk in decompress(s3_object):
             events += chunk
             partitioned_events = partition_available_events(events)
             if is_partitioned(partitioned_events):
                 events = partitioned_events[2]
-                send(partitioned_events[0])
+                batch = send(partitioned_events[0], batch, False)
 
-        send(events)
+        send(events, batch)
 
 def decompress (s3_object):
     decompressor = zlib.decompressobj(0)
@@ -54,9 +55,7 @@ def partition_available_events (data):
 def is_partitioned (partition):
     return partition[1] != ""
 
-def process (events):
-    batch = []
-
+def process (events, batch = [], is_last_call = True):
     for event_string in events.splitlines():
         event = json.loads(event_string)
 
@@ -87,6 +86,9 @@ def process (events):
         if len(batch) == MAX_EVENTS_PER_BATCH:
             send(batch)
             batch = []
+
+    if not is_last_call:
+        return batch
 
     if len(batch) > 0:
         send(batch)
