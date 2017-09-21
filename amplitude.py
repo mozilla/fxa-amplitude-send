@@ -64,13 +64,9 @@ def process (events, batch = [], is_last_call = True):
     for event_string in events.splitlines():
         event = json.loads(event_string)["Fields"]
 
-        print "event", event
-
-        # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
-        # TODO: Long-term we probably want to ignore malformed events rather than fail
-        assert("device_id" in event or "user_id" in event)
-        assert("event_type" in event)
-        assert("time" in event)
+        if not is_event_ok(event):
+            print "skipping malformed event", event
+            continue
 
         insert_id_hmac = hmac.new(HMAC_KEY, digestmod=hashlib.sha256)
 
@@ -99,6 +95,10 @@ def process (events, batch = [], is_last_call = True):
 
     if len(batch) > 0:
         send(batch)
+
+def is_event_ok (event):
+    # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
+    return ("device_id" in event or "user_id" in event) and "event_type" in event and "time" in event
 
 def send (batch):
     batch_interval = time.time() - send.batch_time
