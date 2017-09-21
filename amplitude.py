@@ -29,6 +29,10 @@ def handle (message):
         events = ""
         for chunk in decompress(s3_object):
             events += chunk
+            partitioned_events = partition_available_events(events)
+            if is_partitioned(partitioned_events):
+                events = partitioned_events[2]
+                send(partitioned_events[0])
 
         send(events)
 
@@ -38,6 +42,17 @@ def decompress (s3_object):
         decompressed = decompressor.decompress(chunk)
         if decompressed:
             yield decompressed
+
+def partition_available_events (data):
+    result = string.rpartition("\n")
+
+    if not is_partitioned(result):
+        result = string.rpartition("\r")
+
+    return result
+
+def is_partitioned (partition):
+    return partition[1] != ""
 
 def process (events):
     batch = []
