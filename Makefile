@@ -4,7 +4,7 @@ ENV = ./build
 PIP_INSTALL = $(ENV)/bin/pip install
 DEPS = $(ENV)/.done
 
-.PHONY: test
+.PHONY: test package
 
 package:
 	docker build . -t fxa-amplitude-send:latest
