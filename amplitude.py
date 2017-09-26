@@ -7,7 +7,6 @@ import json
 import os
 import requests
 import sys
-import tempfile
 import time
 import zlib
 
@@ -49,14 +48,12 @@ def handle (message, context):
             continue
 
         print record["s3"]["bucket"]["name"], record["s3"]["object"]["key"]
+
         s3 = boto3.resource("s3", region_name=record["awsRegion"])
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
-        tmpfileobj, tmppath = tempfile.mkstemp()
-        s3_object.download_file(tmppath)
 
-        with open(tmppath) as f:
-            # This will fail if the data is not compressed.
-            process_compressed(f)
+        # This will fail if the data is not compressed.
+        process_compressed(s3_object.get()['Body'].read())
 
 def process_compressed (data):
     events = ""
@@ -71,9 +68,9 @@ def process_compressed (data):
 
     process(events, batch)
 
-def decompress (s3_object):
+def decompress (data):
     decompressor = zlib.decompressobj(ZLIB_HEADER_SIZE + zlib.MAX_WBITS)
-    for chunk in s3_object:
+    for chunk in data:
         decompressed = decompressor.decompress(chunk)
         if decompressed:
             yield decompressed
