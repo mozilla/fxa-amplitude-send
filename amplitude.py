@@ -33,7 +33,7 @@ def kms_decrypt(encrypted_data):
     )
     return res["Plaintext"].decode("utf-8")
 
-if os.environ["LAMBDA_TASK_ROOT"]:
+if "LAMBDA_TASK_ROOT" in os.environ:
     AMPLITUDE_API_KEY = str(kms_decrypt_env("FXA_AMPLITUDE_API_KEY"))
     HMAC_KEY = str(kms_decrypt_env("FXA_AMPLITUDE_HMAC_KEY"))
 
