@@ -18,6 +18,8 @@ MAX_EVENTS_PER_BATCH = 10
 MAX_BATCHES_PER_SECOND = 100
 MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 
+IDENTIFY_VERBS = ("$set", "$setOnce", "$add", "$append", "$unset")
+
 # Cargo-culted from the internet. zlib >= 1.2.3.5 apparently supports
 # specifying wbits=0 but that didn't work for me locally. This did.
 ZLIB_WBITS = 32 + zlib.MAX_WBITS
@@ -53,7 +55,7 @@ def handle (message, context):
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
         # This will fail if the data is not compressed.
-        process_compressed(s3_object.get()['Body'].read())
+        process_compressed(s3_object.get()["Body"].read())
 
 def process_compressed (data):
     events = ""
@@ -107,15 +109,17 @@ def process (events, batch = [], is_last_call = True):
             print "skipping malformed event", event
             continue
 
+        user_id = device_id = None
         insert_id_hmac = hmac.new(HMAC_KEY, digestmod=hashlib.sha256)
 
         if "user_id" in event:
             user_id_hmac = hmac.new(HMAC_KEY, event["user_id"], hashlib.sha256)
-            event["user_id"] = user_id_hmac.hexdigest()
-            insert_id_hmac.update(event["user_id"])
+            user_id = event["user_id"] = user_id_hmac.hexdigest()
+            insert_id_hmac.update(user_id)
 
         if "device_id" in event:
-            insert_id_hmac.update(event["device_id"])
+            device_id = event["device_id"]
+            insert_id_hmac.update(device_id)
 
         if "session_id" in event:
             insert_id_hmac.update(str(event["session_id"]))
@@ -123,6 +127,9 @@ def process (events, batch = [], is_last_call = True):
         insert_id_hmac.update(event["event_type"])
         insert_id_hmac.update(str(event["time"]))
         event["insert_id"] = insert_id_hmac.hexdigest()
+
+        if contains_identify_verbs(event["user_properties"]):
+            event["user_properties"] = process_identify_verbs(event["user_properties"], user_id, device_id)
 
         batch.append(event)
         if len(batch) == MAX_EVENTS_PER_BATCH:
@@ -138,6 +145,25 @@ def process (events, batch = [], is_last_call = True):
 def is_event_ok (event):
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
     return ("device_id" in event or "user_id" in event) and "event_type" in event and "time" in event
+
+def contains_identify_verbs (user_properties):
+    return reduce(lambda contains, verb: contains or verb in user_properties, IDENTIFY_VERBS, False)
+
+def process_identify_verbs (user_properties, user_id, device_id):
+    def split (payloads, key):
+        payloads["identify" if key in IDENTIFY_VERBS else "pruned"][key] = user_properties[key]
+        return payloads
+
+    payloads = reduce(split, user_properties.keys(), {"pruned": {}, "identify": {}})
+
+    # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
+    requests.post("https://api.amplitude.com/identify",
+                  data={"api_key": AMPLITUDE_API_KEY,
+                        "identification": json.dumps({"user_id": user_id,
+                                                      "device_id": device_id,
+                                                      "user_properties": payloads["identify"]})})
+
+    return payloads["pruned"]
 
 def send (batch):
     batch_interval = time.time() - send.batch_time
