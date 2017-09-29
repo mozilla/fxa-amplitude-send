@@ -20,7 +20,7 @@ MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 
 # Cargo-culted from the internet. zlib >= 1.2.3.5 apparently supports
 # specifying wbits=0 but that didn't work for me locally. This did.
-ZLIB_HEADER_SIZE = 32
+ZLIB_WBITS = 32 + zlib.MAX_WBITS
 
 def kms_decrypt_env(key):
     """Decrypt environment variable"""
@@ -69,7 +69,7 @@ def process_compressed (data):
     process(events, batch)
 
 def decompress (data):
-    decompressor = zlib.decompressobj(ZLIB_HEADER_SIZE + zlib.MAX_WBITS)
+    decompressor = zlib.decompressobj(ZLIB_WBITS)
     for chunk in data:
         decompressed = decompressor.decompress(chunk)
         if decompressed:
