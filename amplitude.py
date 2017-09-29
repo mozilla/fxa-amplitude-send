@@ -167,9 +167,10 @@ def send (batches):
 
     print "sending, identify: {}, event: {}".format(len(batches["identify"]), len(batches["event"]))
 
-    # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
-    requests.post("https://api.amplitude.com/identify",
-                  data={"api_key": AMPLITUDE_API_KEY, "identification": json.dumps(batches["identify"])})
+    if len(batches["identify"]) > 0:
+        # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
+        requests.post("https://api.amplitude.com/identify",
+                      data={"api_key": AMPLITUDE_API_KEY, "identification": json.dumps(batches["identify"])})
 
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#request-format
     response = requests.post("https://api.amplitude.com/httpapi",
