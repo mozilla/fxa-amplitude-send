@@ -7,6 +7,7 @@ import json
 import os
 import requests
 import sys
+import threading
 import zlib
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
@@ -162,9 +163,10 @@ def send (batches):
     print "sending, identify: {}, event: {}".format(len(batches["identify"]), len(batches["event"]))
 
     if len(batches["identify"]) > 0:
-        # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
-        requests.post("https://api.amplitude.com/identify",
-                      data={"api_key": AMPLITUDE_API_KEY, "identification": json.dumps(batches["identify"])})
+        # Because the Identify API is slow and we don't handle the response,
+        # we can move it to a worker thread to improve overall throughput.
+        identify_thread = threading.Thread(target = send_identify, args = (json.dumps(batches["identify"]),))
+        identify_thread.start()
 
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#request-format
     response = requests.post("https://api.amplitude.com/httpapi",
@@ -173,6 +175,11 @@ def send (batches):
     # For want of a better error-handling mechanism,
     # one failed request fails an entire dump from S3.
     response.raise_for_status()
+
+def send_identify (identification):
+    # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
+    requests.post("https://api.amplitude.com/identify",
+                  data = {"api_key": AMPLITUDE_API_KEY, "identification": identification})
 
 if __name__ == "__main__":
     argc = len(sys.argv)
