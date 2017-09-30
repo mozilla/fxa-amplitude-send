@@ -8,6 +8,7 @@ import os
 import requests
 import sys
 import threading
+import time
 import zlib
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
@@ -16,6 +17,7 @@ HMAC_KEY = os.environ["FXA_AMPLITUDE_HMAC_KEY"]
 # For crude pre-emptive rate-limit obedience.
 MAX_EVENTS_PER_BATCH = 10
 MAX_BATCHES_PER_SECOND = 100
+MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 
 IDENTIFY_VERBS = ("$set", "$setOnce", "$add", "$append", "$unset")
 
@@ -160,6 +162,10 @@ def process_identify_verbs (user_properties):
     return reduce(split, user_properties.keys(), {"identify": {}, "pruned": {}})
 
 def send (batches):
+    batch_interval = time.time() - send.batch_time
+    if batch_interval < MIN_BATCH_INTERVAL:
+        time.sleep(MIN_BATCH_INTERVAL - batch_interval)
+
     print "sending, identify: {}, event: {}".format(len(batches["identify"]), len(batches["event"]))
 
     if len(batches["identify"]) > 0:
@@ -175,6 +181,10 @@ def send (batches):
     # For want of a better error-handling mechanism,
     # one failed request fails an entire dump from S3.
     response.raise_for_status()
+
+    send.batch_time = time.time()
+
+send.batch_time = 0
 
 def send_identify (identification):
     # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
