@@ -166,8 +166,6 @@ def send (batches):
     if batch_interval < MIN_BATCH_INTERVAL:
         time.sleep(MIN_BATCH_INTERVAL - batch_interval)
 
-    print "sending, identify: {}, event: {}".format(len(batches["identify"]), len(batches["event"]))
-
     if len(batches["identify"]) > 0:
         # Because the Identify API is slow and we don't handle the response,
         # we can move it to a worker thread to improve overall throughput.
