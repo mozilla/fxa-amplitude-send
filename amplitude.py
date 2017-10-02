@@ -7,6 +7,8 @@ import json
 import os
 import requests
 import sys
+import threading
+import time
 import zlib
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
@@ -15,6 +17,7 @@ HMAC_KEY = os.environ["FXA_AMPLITUDE_HMAC_KEY"]
 # For crude pre-emptive rate-limit obedience.
 MAX_EVENTS_PER_BATCH = 10
 MAX_BATCHES_PER_SECOND = 100
+MIN_BATCH_INTERVAL = 1.0 / MAX_BATCHES_PER_SECOND
 
 IDENTIFY_VERBS = ("$set", "$setOnce", "$add", "$append", "$unset")
 
@@ -159,10 +162,15 @@ def process_identify_verbs (user_properties):
     return reduce(split, user_properties.keys(), {"identify": {}, "pruned": {}})
 
 def send (batches):
+    batch_interval = time.time() - send.batch_time
+    if batch_interval < MIN_BATCH_INTERVAL:
+        time.sleep(MIN_BATCH_INTERVAL - batch_interval)
+
     if len(batches["identify"]) > 0:
-        # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
-        requests.post("https://api.amplitude.com/identify",
-                      data={"api_key": AMPLITUDE_API_KEY, "identification": json.dumps(batches["identify"])})
+        # Because the Identify API is slow and we don't handle the response,
+        # we can move it to a worker thread to improve overall throughput.
+        identify_thread = threading.Thread(target = send_identify, args = (json.dumps(batches["identify"]),))
+        identify_thread.start()
 
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#request-format
     response = requests.post("https://api.amplitude.com/httpapi",
@@ -171,6 +179,15 @@ def send (batches):
     # For want of a better error-handling mechanism,
     # one failed request fails an entire dump from S3.
     response.raise_for_status()
+
+    send.batch_time = time.time()
+
+send.batch_time = 0
+
+def send_identify (identification):
+    # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
+    requests.post("https://api.amplitude.com/identify",
+                  data = {"api_key": AMPLITUDE_API_KEY, "identification": identification})
 
 if __name__ == "__main__":
     argc = len(sys.argv)
