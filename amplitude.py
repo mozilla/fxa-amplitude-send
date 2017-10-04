@@ -66,9 +66,9 @@ def process_compressed (pool, data):
         partitioned_events = partition_available_events(events)
         if is_partitioned(partitioned_events):
             events = partitioned_events[2]
-            batches = process(pool, partitioned_events[0], batches, is_last_call = False)
+            batches = process(pool, partitioned_events[0], batches, False)
 
-    process(events, batches)
+    process(pool, events, batches)
 
 def decompress (data):
     decompressor = zlib.decompressobj(ZLIB_WBITS)
@@ -91,6 +91,7 @@ def is_partitioned (partition):
 def process (pool, events, batches = None, is_last_call = True):
     if batches is None:
         batches = {"identify": [], "event": []}
+
     for event_string in events.splitlines():
         event = json.loads(event_string)
 
