@@ -13,6 +13,7 @@ import zlib
 
 AMPLITUDE_API_KEY = os.environ["FXA_AMPLITUDE_API_KEY"]
 HMAC_KEY = os.environ["FXA_AMPLITUDE_HMAC_KEY"]
+THREAD_COUNT = int(os.environ["FXA_AMPLITUDE_THREAD_COUNT"])
 
 # For crude pre-emptive rate-limit obedience.
 MAX_EVENTS_PER_BATCH = 10
@@ -195,14 +196,13 @@ class SenderThreadPool:
     completed.
     """
 
-    def __init__(self, num_threads=4):
-        self.num_threads = num_threads
+    def __init__(self):
         self._queue = Queue()
         self._threads = []
         self._err = None
 
     def __enter__(self):
-        for _ in xrange(self.num_threads):
+        for _ in xrange(THREAD_COUNT):
             t = threading.Thread(target=self._worker_thread)
             self._threads.append(t)
             t.start()
