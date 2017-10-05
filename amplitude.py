@@ -54,8 +54,9 @@ def handle (message, context):
         s3 = boto3.resource("s3", region_name=record["awsRegion"])
         s3_object = s3.Object(record["s3"]["bucket"]["name"], record["s3"]["object"]["key"])
 
-        # This will fail if the data is not compressed.
-        process_compressed(s3_object.get()["Body"].read())
+        with SenderThreadPool() as pool:
+            # This will fail if the data is not compressed.
+            process_compressed(pool, s3_object.get()["Body"].read())
 
 def process_compressed (pool, data):
     events = ""
