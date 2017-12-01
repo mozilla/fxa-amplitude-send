@@ -4,7 +4,7 @@ ENV = ./build
 PIP_INSTALL = $(ENV)/bin/pip install
 DEPS = $(ENV)/.done
 
-.PHONY: test package
+.PHONY: deps test package
 
 package:
 	docker build . -t fxa-amplitude-send:latest
@@ -15,7 +15,10 @@ package:
 test: $(DEPS)
 	./test.sh
 
-$(DEPS):
+testsync: $(DEPS)
+	./build/bin/python sync.py part-r-00000-668e1585-7848-46eb-8c76-8ceae9cd1cf8.snappy.parquet
+
+$(DEPS): requirements.txt
 	$(VIRTUALENV) --no-site-packages $(ENV)
 	$(PIP_INSTALL) -r requirements.txt
 	touch $(DEPS)
