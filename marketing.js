@@ -128,9 +128,9 @@ function createEvent (row) {
   return {
     event_type: `mktg - ${eventType}`,
     time,
-    user_id,
+    user_id: hash(user_id),
     session_id: -1,
-    insert_id: getInsertId(user_id, eventType, time, email_id),
+    insert_id: hash(user_id, eventType, time, email_id),
     event_properties: getEventProperties(row)
   }
 }
@@ -149,7 +149,7 @@ function getTime (row) {
   }
 }
 
-function getInsertId (...properties) {
+function hash (...properties) {
   const hmac = crypto.createHmac('sha256', HMAC_KEY)
 
   properties.forEach(property => hmac.update(`${property}`))
