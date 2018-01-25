@@ -30,6 +30,7 @@ const fileNames = fs.readdirSync(cwd)
 
 const missingDeviceIds = []
 const missingSessionIds = []
+const missingDeviceAndSessionIds = []
 const futureSessionIds = []
 const futureTimes = []
 const users = new Map()
@@ -61,9 +62,18 @@ const events = fileNames.reduce((previousEvents, fileName) => {
   const text = fs.readFileSync(path.join(cwd, fileName), { encoding: 'utf8' })
   const lines = text.split('\n')
   const data = lines
-    .filter(line => !! line.trim())
+    .filter(line => !! line.trim() && line.indexOf("amplitudeEvent") !== -1)
     .map((line, index) => {
-      const event = JSON.parse(line)
+      let event
+      try {
+        event = JSON.parse(line)
+        if (event.Fields) {
+          event = event.Fields
+        }
+      } catch (_) {
+        event = {}
+      }
+
       const datum = {
         file: fileName,
         line: index + 1,
@@ -72,16 +82,21 @@ const events = fileNames.reduce((previousEvents, fileName) => {
       }
 
       const deviceId = event.device_id
+      const sessionId = event.session_id
+
       if (! deviceId) {
         missingDeviceIds.push(datum)
+
+        if (! sessionId) {
+          missingDeviceAndSessionIds.push(datum)
+        }
       }
 
-      const sessionId = event.session_id
-      if (! event.session_id) {
+      if (! sessionId) {
         missingSessionIds.push(datum)
       }
 
-      if (event.session_id > target) {
+      if (sessionId > target) {
         futureSessionIds.push(datum)
       }
 
@@ -131,6 +146,11 @@ if (VERBOSE) {
 console.log('MISSING session_id:', missingSessionIds.length)
 if (VERBOSE) {
   missingSessionIds.forEach(datum => console.log(datum))
+}
+
+console.log('MISSING device_id AND session_id:', missingDeviceAndSessionIds.length)
+if (VERBOSE) {
+  missingDeviceAndSessionIds.forEach(datum => console.log(datum))
 }
 
 console.log('FUTURE session_id:', futureSessionIds.length)
