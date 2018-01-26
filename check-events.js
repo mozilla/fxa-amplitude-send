@@ -30,6 +30,7 @@ const fileNames = fs.readdirSync(cwd)
 
 const missingUserAndDeviceAndSessionIds = createStat()
 const missingUserAndDeviceIds = createStat()
+const missingUserAndSessionIds = createStat()
 const missingDeviceAndSessionIds = createStat()
 const missingUserIds = createStat()
 const missingDeviceIds = createStat()
@@ -96,6 +97,8 @@ const events = fileNames.reduce((previousEvents, fileName) => {
           } else {
             missingUserAndDeviceIds[category].push(datum)
           }
+        } else if (! sessionId) {
+          missingUserAndSessionIds[category].push(datum)
         } else {
           missingUserIds[category].push(datum)
         }
@@ -142,6 +145,7 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 displayStat(events, 'EVENTS')
 displayStatVerbose(missingUserAndDeviceAndSessionIds, 'MISSING user_id AND device_id AND session_id')
 displayStatVerbose(missingUserAndDeviceIds, 'MISSING user_id AND device_id')
+displayStatVerbose(missingUserAndSessionIds, 'MISSING user_id AND session_id')
 displayStatVerbose(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
 displayStatVerbose(missingUserIds, 'MISSING user_id')
 displayStatVerbose(missingDeviceIds, 'MISSING device_id')
@@ -149,9 +153,9 @@ displayStatVerbose(missingSessionIds, 'MISSING session_id')
 displayStatVerbose(futureSessionIds, 'FUTURE session_id')
 displayStatVerbose(futureTimes, 'FUTURE time')
 
+const conflictingUserIds = []
 const conflictingDeviceIds = []
 const conflictingSessionIds = []
-const conflictingUserIds = []
 
 events.auth.forEach(datum => {
   const event = datum.event
