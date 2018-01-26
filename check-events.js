@@ -10,8 +10,8 @@ const CATEGORY_FORMAT = /^logging\.s3\.fxa\.([a-z]+)_server/
 const VERBOSE = false
 
 const args = process.argv.slice(2);
-const fileNames = args.map((directory) => { return fs.readdirSync(directory); })
-  .reduce((a, b) => return a.concat(b), [])
+const fileNames = args.map((directory) => { return fs.readdirSync(directory) })
+  .reduce((a, b) => { return a.concat(b) }, [])
 
 console.log(args);
 console.log(fileNames);
