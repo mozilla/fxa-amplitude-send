@@ -28,26 +28,12 @@ until = until.slice(1)
 const cwd = process.cwd()
 const fileNames = fs.readdirSync(cwd)
 
-const missingDeviceIds = {
-  content: [],
-  auth: []
-}
-const missingSessionIds = {
-  content: [],
-  auth: []
-}
-const missingDeviceAndSessionIds = {
-  content: [],
-  auth: []
-}
-const futureSessionIds = {
-  content: [],
-  auth: []
-}
-const futureTimes = {
-  content: [],
-  auth: []
-}
+const missingDeviceIds = createStat()
+const missingSessionIds = createStat()
+const missingDeviceAndSessionIds = createStat()
+const futureSessionIds = createStat()
+const futureTimes = createStat()
+
 const users = new Map()
 
 const events = fileNames.reduce((previousEvents, fileName) => {
@@ -139,20 +125,14 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 
   previousEvents[category] = previousEvents[category].concat(data)
   return previousEvents
-}, {
-  content: [],
-  auth: []
-})
+}, createStat())
 
-const contentCount = events.content.length
-const authCount = events.auth.length
-console.log(`EVENTS: ${contentCount + authCount} (content: ${contentCount}, auth: ${authCount})`)
-
-displayStat(missingDeviceIds, 'MISSING device_id')
-displayStat(missingSessionIds, 'MISSING session_id')
-displayStat(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
-displayStat(futureSessionIds, 'FUTURE session_id')
-displayStat(futureTimes, 'FUTURE time')
+displayStat(events, 'EVENTS')
+displayStatVerbose(missingDeviceIds, 'MISSING device_id')
+displayStatVerbose(missingSessionIds, 'MISSING session_id')
+displayStatVerbose(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
+displayStatVerbose(futureSessionIds, 'FUTURE session_id')
+displayStatVerbose(futureTimes, 'FUTURE time')
 
 const conflictingDeviceIds = []
 const conflictingSessionIds = []
@@ -219,6 +199,13 @@ function satisfiesOrEquals (subject, object, diff) {
   return result
 }
 
+function createStat () {
+   return {
+    content: [],
+    auth: []
+  }
+}
+
 function timestamp (time) {
   return Date.parse(`${time[0]}-${time[1]}-${time[2]}T${time[3]}:${time[4]}:59.999`)
 }
@@ -229,6 +216,10 @@ function displayStat (stat, description) {
   const categoryCounts = categories.map(item => `${item.category}: ${item.count}`).join(', ')
 
   console.log(`${description}: ${count} (${categoryCounts})`)
+}
+
+function displayStatVerbose (stat, description) {
+  displayStat(stat, description)
 
   if (VERBOSE) {
     Object.keys(stat).forEach(key => stat[key].forEach(datum => console.log(datum)))
