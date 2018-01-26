@@ -28,9 +28,12 @@ until = until.slice(1)
 const cwd = process.cwd()
 const fileNames = fs.readdirSync(cwd)
 
+const missingUserAndDeviceAndSessionIds = createStat()
+const missingUserAndDeviceIds = createStat()
+const missingDeviceAndSessionIds = createStat()
+const missingUserIds = createStat()
 const missingDeviceIds = createStat()
 const missingSessionIds = createStat()
-const missingDeviceAndSessionIds = createStat()
 const futureSessionIds = createStat()
 const futureTimes = createStat()
 
@@ -82,10 +85,21 @@ const events = fileNames.reduce((previousEvents, fileName) => {
         event
       }
 
+      const uid = event.user_id
       const deviceId = event.device_id
       const sessionId = event.session_id
 
-      if (! deviceId) {
+      if (! uid) {
+        if (! deviceId) {
+          if (! sessionId) {
+            missingUserAndDeviceAndSessionIds[category].push(datum)
+          } else {
+            missingUserAndDeviceIds[category].push(datum)
+          }
+        } else {
+          missingUserIds[category].push(datum)
+        }
+      } else if (! deviceId) {
         if (! sessionId) {
           missingDeviceAndSessionIds[category].push(datum)
         } else {
@@ -103,7 +117,6 @@ const events = fileNames.reduce((previousEvents, fileName) => {
         futureTimes[category].push(datum)
       }
 
-      const uid = event.user_id
       if (isContentServerEvent && uid && deviceId && sessionId) {
         const user = getUser(uid)
 
@@ -127,9 +140,12 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 }, createStat())
 
 displayStat(events, 'EVENTS')
+displayStatVerbose(missingUserAndDeviceAndSessionIds, 'MISSING user_id AND device_id AND session_id')
+displayStatVerbose(missingUserAndDeviceIds, 'MISSING user_id AND device_id')
+displayStatVerbose(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
+displayStatVerbose(missingUserIds, 'MISSING user_id')
 displayStatVerbose(missingDeviceIds, 'MISSING device_id')
 displayStatVerbose(missingSessionIds, 'MISSING session_id')
-displayStatVerbose(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
 displayStatVerbose(futureSessionIds, 'FUTURE session_id')
 displayStatVerbose(futureTimes, 'FUTURE time')
 
