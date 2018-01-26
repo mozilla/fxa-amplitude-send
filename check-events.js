@@ -35,6 +35,7 @@ const futureSessionIds = createStat()
 const futureTimes = createStat()
 
 const users = new Map()
+const devices = new Map()
 
 const events = fileNames.reduce((previousEvents, fileName) => {
   let time = TIME_FORMAT.exec(fileName)
@@ -103,21 +104,19 @@ const events = fileNames.reduce((previousEvents, fileName) => {
       }
 
       const uid = event.user_id
-      if (isContentServerEvent) {
-        const user = users.get(uid) || {
-          deviceSessions: new Map(),
-          sessionDevices: new Map()
-        }
+      if (isContentServerEvent && uid && deviceId && sessionId) {
+        const user = getUser(uid)
 
-        const deviceSessions = user.deviceSessions.get(deviceId) || new Set()
-        deviceSessions.add(sessionId)
-        user.deviceSessions.set(deviceId, deviceSessions)
-
-        const sessionDevices = user.sessionDevices.get(sessionId) || new Set()
-        sessionDevices.add(deviceId)
-        user.sessionDevices.set(sessionId, sessionDevices)
+        multiMapSet(user.deviceSessions, deviceId, sessionId)
+        multiMapSet(user.sessionDevices, sessionId, deviceId)
 
         users.set(uid, user)
+
+        const device = getDevice(deviceId)
+
+        multiMapSet(device.sessionUsers, sessionId, userId)
+
+        devices.set(deviceId, device)
       }
 
       return datum
@@ -136,37 +135,25 @@ displayStatVerbose(futureTimes, 'FUTURE time')
 
 const conflictingDeviceIds = []
 const conflictingSessionIds = []
+const conflictingUserIds = []
 
 events.auth.forEach(datum => {
   const event = datum.event
-  const user = users.get(event.user_id) || {
-    deviceSessions: new Map(),
-    sessionDevices: new Map()
-  }
-
+  const uid = event.user_id
   const deviceId = event.device_id
   const sessionId = event.session_id
 
-  const deviceSessions = user.deviceSessions.get(deviceId)
-  if (deviceSessions && ! deviceSessions.has(sessionId)) {
-    conflictingSessionIds.push(datum)
-  }
+  const user = getUser(uid)
+  const device = getDevice(deviceId)
 
-  const sessionDevices = user.sessionDevices.get(sessionId)
-  if (sessionDevices && ! sessionDevices.has(deviceId)) {
-    conflictingDeviceIds.push(datum)
-  }
+  optionallySetConflict(conflictingSessionIds, datum, user.deviceSessions, deviceId, sessionId)
+  optionallySetConflict(conflictingDeviceIds, datum, user.sessionDevices, sessionId, deviceId)
+  optionallySetConflict(conflictingUserIds, datum, device.sessionUsers, sessionId, uid)
 })
 
-console.log('CONFLICTING device_id:', conflictingDeviceIds.length)
-if (VERBOSE) {
-  conflictingDeviceIds.forEach(datum => console.log(datum))
-}
-
-console.log('CONFLICTING session_id:', conflictingSessionIds.length)
-if (VERBOSE) {
-  conflictingSessionIds.forEach(datum => console.log(datum))
-}
+displayConflict('user_id', conflictingUserIds)
+displayConflict('device_id', conflictingDeviceIds)
+displayConflict('session_id', conflictingSessionIds)
 
 function usage () {
   console.error(`Usage: node ${args[1]} FROM UNTIL`)
@@ -210,6 +197,25 @@ function timestamp (time) {
   return Date.parse(`${time[0]}-${time[1]}-${time[2]}T${time[3]}:${time[4]}:59.999`)
 }
 
+function getUser (uid) {
+  return users.get(uid) || {
+    deviceSessions: new Map(),
+    sessionDevices: new Map()
+  }
+}
+
+function getDevice (deviceId) {
+  return devices.get(deviceId) || {
+    sessionUsers: new Map()
+  }
+}
+
+function multiMapSet (map, key, value) {
+  const set = map.get(key) || new Set()
+  set.add(value)
+  map.set(key, set)
+}
+
 function displayStat (stat, description) {
   const categories = Object.keys(stat).map(key => ({ category: key, count: stat[key].length }))
   const count = categories.reduce((sum, item) => sum + item.count, 0)
@@ -223,6 +229,20 @@ function displayStatVerbose (stat, description) {
 
   if (VERBOSE) {
     Object.keys(stat).forEach(key => stat[key].forEach(datum => console.log(datum)))
+  }
+}
+
+function optionallySetConflict (conflicts, datum, map, key, value) {
+  const set = map.get(key)
+  if (set && ! set.has(value)) {
+    conflicts.push(datum)
+  }
+}
+
+function displayConflict (property, conflicts) {
+  console.log(`CONFLICTING ${property}: ${conflicts.length}`)
+  if (VERBOSE) {
+    conflicts.forEach(datum => console.log(datum))
   }
 }
 
