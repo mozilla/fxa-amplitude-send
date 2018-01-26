@@ -7,7 +7,7 @@ const path = require('path')
 const zlib = require('zlib')
 
 const TIME_FORMAT = /(201[78])-([0-9]{2})-([0-9]{2})-([0-9]{2})-([0-9]{2})/
-const CATEGORY_FORMAT = /^logging\.s3\.fxa\.([a-z]+)_server/
+const CATEGORY_FORMAT = /logging\.s3\.fxa\.([a-z]+)_server/
 const VERBOSE = false
 
 const args = process.argv.slice(2);
@@ -53,9 +53,9 @@ const events = fileNames.reduce((previousEvents, fileName) => {
   const fileBuffer = fs.readFileSync(fileName);
   let text;
   if (fileBuffer[0] == 0x1F && fileBuffer[1] == 0x8B && fileBuffer[2] == 0x8) {
-    text = zlib.gunzipSync(fileBuffer)
+    text = zlib.gunzipSync(fileBuffer).toString('utf8')
   } else {
-    text = fileBuffer.toString('utf8');
+    text = fileBuffer.toString('utf8')
   }
 
   const lines = text.split('\n')
