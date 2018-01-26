@@ -9,24 +9,12 @@ const TIME_FORMAT = /(201[78])-([0-9]{2})-([0-9]{2})-([0-9]{2})-([0-9]{2})/
 const CATEGORY_FORMAT = /^logging\.s3\.fxa\.([a-z]+)_server/
 const VERBOSE = false
 
-const args = process.argv
+const args = process.argv.slice(2);
+const fileNames = args.map((directory) => { return fs.readdirSync(directory); })
+  .reduce((a, b) => return a.concat(b), [])
 
-if (args.length !== 4) {
-  usage()
-}
-
-let from = TIME_FORMAT.exec(args[2])
-let until = TIME_FORMAT.exec(args[3])
-
-if (! from || ! until) {
-  usage()
-}
-
-from = from.slice(1)
-until = until.slice(1)
-
-const cwd = process.cwd()
-const fileNames = fs.readdirSync(cwd)
+console.log(args);
+console.log(fileNames);
 
 const missingUserAndDeviceAndSessionIds = createStat()
 const missingUserAndDeviceIds = createStat()
