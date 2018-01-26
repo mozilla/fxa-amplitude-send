@@ -238,15 +238,13 @@ function displayStat (stat, description) {
     count: stat[key].length,
     percentage: Math.round(stat[key].length / events[key].length * 100)
   }))
-  const categoryCounts = categories
-    .map(item => `${item.category}: ${item.count} / ${item.percentage}%`)
-    .join(', ')
 
   const count = categories.reduce((sum, item) => sum + item.count, 0)
   const eventCount = Object.keys(events).reduce((sum, key) => sum + events[key].length, 0)
   const percentage = Math.round(count / eventCount * 100)
 
-  console.log(`${description}: ${count} / ${percentage}% (${categoryCounts})`)
+  console.log(`${description}: ${count} (${percentage}%)`)
+  categories.forEach(item => console.log(`  ${item.category}: ${item.count} (${item.percentage}%)`))
 }
 
 function displayStatVerbose (stat, description) {
@@ -268,7 +266,7 @@ function displayConflict (property, conflicts) {
   const count = conflicts.length
   const percentage = Math.round(count / events.auth.length * 100)
 
-  console.log(`CONFLICTING ${property}: ${count} / ${percentage}%`)
+  console.log(`CONFLICTING ${property}: ${count} (${percentage}%)`)
   if (VERBOSE) {
     conflicts.forEach(datum => console.log(datum))
   }
