@@ -85,14 +85,12 @@ const events = fileNames.reduce((previousEvents, fileName) => {
       const sessionId = event.session_id
 
       if (! deviceId) {
-        missingDeviceIds.push(datum)
-
         if (! sessionId) {
           missingDeviceAndSessionIds.push(datum)
+        } else {
+          missingDeviceIds.push(datum)
         }
-      }
-
-      if (! sessionId) {
+      } else if (! sessionId) {
         missingSessionIds.push(datum)
       }
 
