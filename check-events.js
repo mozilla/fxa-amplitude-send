@@ -233,11 +233,20 @@ function multiMapSet (map, key, value) {
 }
 
 function displayStat (stat, description) {
-  const categories = Object.keys(stat).map(key => ({ category: key, count: stat[key].length }))
-  const count = categories.reduce((sum, item) => sum + item.count, 0)
-  const categoryCounts = categories.map(item => `${item.category}: ${item.count}`).join(', ')
+  const categories = Object.keys(stat).map(key => ({
+    category: key,
+    count: stat[key].length,
+    percentage: Math.round(stat[key].length / events[key].length * 100)
+  }))
+  const categoryCounts = categories
+    .map(item => `${item.category}: ${item.count} / ${item.percentage}%`)
+    .join(', ')
 
-  console.log(`${description}: ${count} (${categoryCounts})`)
+  const count = categories.reduce((sum, item) => sum + item.count, 0)
+  const eventCount = Object.keys(events).reduce((sum, key) => sum + events[key].length, 0)
+  const percentage = Math.round(count / eventCount * 100)
+
+  console.log(`${description}: ${count} / ${percentage}% (${categoryCounts})`)
 }
 
 function displayStatVerbose (stat, description) {
@@ -256,7 +265,10 @@ function optionallySetConflict (conflicts, datum, map, key, value) {
 }
 
 function displayConflict (property, conflicts) {
-  console.log(`CONFLICTING ${property}: ${conflicts.length}`)
+  const count = conflicts.length
+  const percentage = Math.round(count / events.auth.length * 100)
+
+  console.log(`CONFLICTING ${property}: ${count} / ${percentage}%`)
   if (VERBOSE) {
     conflicts.forEach(datum => console.log(datum))
   }
