@@ -28,11 +28,26 @@ until = until.slice(1)
 const cwd = process.cwd()
 const fileNames = fs.readdirSync(cwd)
 
-const missingDeviceIds = []
-const missingSessionIds = []
-const missingDeviceAndSessionIds = []
-const futureSessionIds = []
-const futureTimes = []
+const missingDeviceIds = {
+  content: [],
+  auth: []
+}
+const missingSessionIds = {
+  content: [],
+  auth: []
+}
+const missingDeviceAndSessionIds = {
+  content: [],
+  auth: []
+}
+const futureSessionIds = {
+  content: [],
+  auth: []
+}
+const futureTimes = {
+  content: [],
+  auth: []
+}
 const users = new Map()
 
 const events = fileNames.reduce((previousEvents, fileName) => {
@@ -77,7 +92,6 @@ const events = fileNames.reduce((previousEvents, fileName) => {
       const datum = {
         file: fileName,
         line: index + 1,
-        time: target,
         event
       }
 
@@ -86,20 +100,20 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 
       if (! deviceId) {
         if (! sessionId) {
-          missingDeviceAndSessionIds.push(datum)
+          missingDeviceAndSessionIds[category].push(datum)
         } else {
-          missingDeviceIds.push(datum)
+          missingDeviceIds[category].push(datum)
         }
       } else if (! sessionId) {
-        missingSessionIds.push(datum)
+        missingSessionIds[category].push(datum)
       }
 
       if (sessionId > target) {
-        futureSessionIds.push(datum)
+        futureSessionIds[category].push(datum)
       }
 
       if (event.time > target) {
-        futureTimes.push(datum)
+        futureTimes[category].push(datum)
       }
 
       const uid = event.user_id
@@ -132,34 +146,13 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 
 const contentCount = events.content.length
 const authCount = events.auth.length
-console.log('EVENTS:', contentCount + authCount)
-console.log('CONTENT:', contentCount)
-console.log('AUTH:', authCount)
+console.log(`EVENTS: ${contentCount + authCount} (content: ${contentCount}, auth: ${authCount})`)
 
-console.log('MISSING device_id:', missingDeviceIds.length)
-if (VERBOSE) {
-  missingDeviceIds.forEach(datum => console.log(datum))
-}
-
-console.log('MISSING session_id:', missingSessionIds.length)
-if (VERBOSE) {
-  missingSessionIds.forEach(datum => console.log(datum))
-}
-
-console.log('MISSING device_id AND session_id:', missingDeviceAndSessionIds.length)
-if (VERBOSE) {
-  missingDeviceAndSessionIds.forEach(datum => console.log(datum))
-}
-
-console.log('FUTURE session_id:', futureSessionIds.length)
-if (VERBOSE) {
-  futureSessionIds.forEach(datum => console.log(datum))
-}
-
-console.log('FUTURE time:', futureTimes.length)
-if (VERBOSE) {
-  futureTimes.forEach(datum => console.log(datum))
-}
+displayStat(missingDeviceIds, 'MISSING device_id')
+displayStat(missingSessionIds, 'MISSING session_id')
+displayStat(missingDeviceAndSessionIds, 'MISSING device_id AND session_id')
+displayStat(futureSessionIds, 'FUTURE session_id')
+displayStat(futureTimes, 'FUTURE time')
 
 const conflictingDeviceIds = []
 const conflictingSessionIds = []
@@ -228,5 +221,17 @@ function satisfiesOrEquals (subject, object, diff) {
 
 function timestamp (time) {
   return Date.parse(`${time[0]}-${time[1]}-${time[2]}T${time[3]}:${time[4]}:59.999`)
+}
+
+function displayStat (stat, description) {
+  const categories = Object.keys(stat).map(key => ({ category: key, count: stat[key].length }))
+  const count = categories.reduce((sum, item) => sum + item.count, 0)
+  const categoryCounts = categories.map(item => `${item.category}: ${item.count}`).join(', ')
+
+  console.log(`${description}: ${count} (${categoryCounts})`)
+
+  if (VERBOSE) {
+    Object.keys(stat).forEach(key => stat[key].forEach(datum => console.log(datum)))
+  }
 }
 
