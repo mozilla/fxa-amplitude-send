@@ -130,7 +130,7 @@ const events = fileNames.reduce((previousEvents, fileName) => {
 
         const device = getDevice(deviceId)
 
-        multiMapSet(device.sessionUsers, sessionId, userId)
+        multiMapSet(device.sessionUsers, sessionId, uid)
 
         devices.set(deviceId, device)
       }
