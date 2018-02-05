@@ -4,29 +4,17 @@
 
 const fs = require('fs')
 const path = require('path')
+const zlib = require('zlib')
 
 const TIME_FORMAT = /(201[78])-([0-9]{2})-([0-9]{2})-([0-9]{2})-([0-9]{2})/
-const CATEGORY_FORMAT = /^logging\.s3\.fxa\.([a-z]+)_server/
+const CATEGORY_FORMAT = /logging\.s3\.fxa\.([a-z]+)_server/
 const VERBOSE = false
 
-const args = process.argv
-
-if (args.length !== 4) {
-  usage()
-}
-
-let from = TIME_FORMAT.exec(args[2])
-let until = TIME_FORMAT.exec(args[3])
-
-if (! from || ! until) {
-  usage()
-}
-
-from = from.slice(1)
-until = until.slice(1)
-
-const cwd = process.cwd()
-const fileNames = fs.readdirSync(cwd)
+const args = process.argv.slice(2);
+const fileNames = args.map((directory) => {
+    return fs.readdirSync(directory).map((file) => { return path.join(directory, file) })
+  })
+  .reduce((a, b) => { return a.concat(b) }, [])
 
 const missingUserAndDeviceAndSessionIds = createStat()
 const missingUserAndDeviceIds = createStat()
@@ -48,9 +36,6 @@ const events = fileNames.reduce((previousEvents, fileName) => {
   }
 
   time = time.slice(1)
-  if (! isInRange(time)) {
-    return
-  }
 
   let category = CATEGORY_FORMAT.exec(fileName)
   if (! category) {
@@ -65,7 +50,14 @@ const events = fileNames.reduce((previousEvents, fileName) => {
   const target = timestamp(time)
   const isContentServerEvent = category === 'content'
 
-  const text = fs.readFileSync(path.join(cwd, fileName), { encoding: 'utf8' })
+  const fileBuffer = fs.readFileSync(fileName);
+  let text;
+  if (fileBuffer[0] == 0x1F && fileBuffer[1] == 0x8B && fileBuffer[2] == 0x8) {
+    text = zlib.gunzipSync(fileBuffer).toString('utf8')
+  } else {
+    text = fileBuffer.toString('utf8')
+  }
+
   const lines = text.split('\n')
   const data = lines
     .filter(line => !! line.trim() && line.indexOf("amplitudeEvent") !== -1)
@@ -179,31 +171,6 @@ function usage () {
   console.error(`Usage: node ${args[1]} FROM UNTIL`)
   console.error('FROM and UNTIL are both YYYY-MM-DD-hh-mm')
   process.exit(1)
-}
-
-function isInRange (time) {
-  return satisfiesOrEquals(time, from, (lhs, rhs) => lhs - rhs) &&
-    satisfiesOrEquals(time, until, (lhs, rhs) => rhs - lhs)
-}
-
-function satisfiesOrEquals (subject, object, diff) {
-  let result = true
-
-  object.some((item, index) => {
-    const d = diff(+subject[index], +item)
-    if (d > 0) {
-      return true
-    }
-
-    if (d < 0) {
-      result = false
-      return true
-    }
-
-    return false
-  })
-
-  return result
 }
 
 function createStat () {
