@@ -11,7 +11,7 @@ const s3 = require('s3')
 fs.unlinkAsync = Promise.promisify(fs.unlink)
 
 const TIMESTAMP = /^(20[1-9][0-9])-([01][0-9])-([0-3][1-9])-([0-2][0-9])-([0-5][0-9])$/
-const EVENT = /^mktg-([a-z]+_[a-z]+)$/
+const EVENT = /^mktg-([a-z]+-[a-z]+)$/
 
 const AWS_ACCESS_KEY = process.env.FXA_AWS_ACCESS_KEY
 const AWS_SECRET_KEY = process.env.FXA_AWS_SECRET_KEY
