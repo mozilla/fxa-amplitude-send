@@ -7,6 +7,7 @@ const fs = require('fs')
 const Promise = require('bluebird')
 const request = require('request-promise')
 const s3 = require('s3')
+const moment = require('moment')
 
 fs.unlinkAsync = Promise.promisify(fs.unlink)
 
@@ -137,15 +138,16 @@ function createEvent (row) {
 
 function getEventType (row) {
   const eventParts = EVENT.exec(row.Event)
+
   if (eventParts && eventParts.length === 2) {
     return eventParts[1]
   }
 }
 
 function getTime (row) {
-  const time = Date.parse(row.EventDate)
-  if (! isNaN(time)) {
-    return Math.round(time / 1000)
+  let time = moment(row.EventDate, 'MMM D YYYY  H:mmA')
+  if (time.isValid()) {
+    return time.unix();
   }
 }
 
