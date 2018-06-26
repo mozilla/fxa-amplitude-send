@@ -145,9 +145,9 @@ function getEventType (row) {
 }
 
 function getTime (row) {
-  let time = moment(row.EventDate, 'MMM D YYYY  H:mmA')
+  const time = moment(row.EventDate, 'MMM D YYYY  H:mmA')
   if (time.isValid()) {
-    return time.unix();
+    return time.unix()
   }
 }
 
