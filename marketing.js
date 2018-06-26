@@ -140,7 +140,7 @@ function getEventType (row) {
   const eventParts = EVENT.exec(row.Event)
 
   if (eventParts && eventParts.length === 2) {
-    return eventParts[1]
+    return eventParts[1].replace(/-/g, '_')
   }
 }
 
