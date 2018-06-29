@@ -7,7 +7,7 @@ const fs = require('fs')
 const Promise = require('bluebird')
 const request = require('request-promise')
 const s3 = require('s3')
-const moment = require('moment')
+const moment = require('moment-timezone')
 
 fs.unlinkAsync = Promise.promisify(fs.unlink)
 
@@ -145,7 +145,7 @@ function getEventType (row) {
 }
 
 function getTime (row) {
-  const time = moment(row.EventDate, 'MMM D YYYY  H:mmA')
+  const time = moment.tz(row.EventDate, 'MMM D YYYY  H:mmA', 'America/Los_Angeles')
   if (time.isValid()) {
     return time.unix()
   }
