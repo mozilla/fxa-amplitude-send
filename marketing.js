@@ -38,10 +38,6 @@ if (! HMAC_KEY || ! API_KEY) {
 }
 
 processData()
-  .then(count => {
-    console.log(`Sent ${count} events!`)
-    process.exit(0)
-  })
   .catch(error => {
     console.error(error.stack)
     process.exit(1)
@@ -66,6 +62,10 @@ function processData () {
 function processStream (stream) {
   let eventCount = 0, batch = [], error
 
+  process.on('exit', () => {
+    console.log(`Sent ${eventCount} events!`)
+  })
+
   return new Promise((resolve, reject) => {
     stream
       .pipe(new AutoDetectDecoderStream())
@@ -84,7 +84,7 @@ function processStream (stream) {
 
         const localBatch = batch.slice()
         batch = []
-        send(localBatch).catch(() => {})
+        send(localBatch).catch(reject)
       })
       .on('end', () => {
         if (error) {
