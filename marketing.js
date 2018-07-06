@@ -8,7 +8,7 @@ const Promise = require('bluebird')
 const request = require('request-promise')
 const s3 = require('s3')
 const moment = require('moment-timezone')
-const {lookup} = require('lookup-dns-cache')
+const { lookup } = require('lookup-dns-cache')
 
 fs.unlinkAsync = Promise.promisify(fs.unlink)
 
@@ -189,7 +189,7 @@ function getEventProperties (row) {
 function sendBatch (batch) {
   return request('https://api.amplitude.com/httpapi', {
     method: 'POST',
-    lookup: lookup,
+    lookup,
     formData: {
       api_key: API_KEY,
       event: JSON.stringify(batch)
