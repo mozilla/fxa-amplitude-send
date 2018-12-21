@@ -13,10 +13,10 @@ if (process.argv.length !== 3) {
   process.exit(1)
 }
 
-const main = async () => {
+main()
+
+async function main () {
   const local_file_stream = fs.createReadStream(process.argv[2])
 
   await marketing.processStream(local_file_stream)
 }
-
-main()
