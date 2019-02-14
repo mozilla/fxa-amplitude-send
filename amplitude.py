@@ -140,20 +140,12 @@ def process (pool, events, batches = None, is_last_call = True):
 
         if contains_identify_verbs(event["user_properties"]):
             result = process_identify_verbs(event["user_properties"])
-            batches["identify"].append({"user_id": user_id, "device_id": device_id,
-                                        "user_properties": result["identify"]})
+            result2 = {"user_id": user_id, "device_id": device_id,
+                                        "user_properties": result["identify"]}
             event["user_properties"] = result["pruned"]
+            print json.dumps(result2)
 
-        batches["event"].append(event)
-        if len(batches["event"]) == MAX_EVENTS_PER_BATCH:
-            pool.send(batches)
-            batches = {"identify": [], "event": []}
-
-    if not is_last_call:
-        return batches
-
-    if len(batches["event"]) > 0:
-        send(batches)
+        print json.dumps(event)
 
 def is_event_ok (event):
     # https://amplitude.zendesk.com/hc/en-us/articles/204771828#keys-for-the-event-argument
@@ -170,20 +162,7 @@ def process_identify_verbs (user_properties):
     return reduce(split, user_properties.keys(), {"identify": {}, "pruned": {}})
 
 def send (batches):
-    if len(batches["identify"]) > 0:
-        # https://amplitude.zendesk.com/hc/en-us/articles/205406617-Identify-API-Modify-User-Properties#request-format
-        response = requests.post("https://api.amplitude.com/identify",
-                                 data={"api_key": AMPLITUDE_API_KEY, "identification": json.dumps(batches["identify"])})
-        response.raise_for_status()
-
-    # https://amplitude.zendesk.com/hc/en-us/articles/204771828#request-format
-    response = requests.post("https://api.amplitude.com/httpapi",
-                             data={"api_key": AMPLITUDE_API_KEY, "event": json.dumps(batches["event"])})
-
-    # For want of a better error-handling mechanism,
-    # one failed request fails an entire dump from S3.
-    response.raise_for_status()
-
+    print(json.dumps(batches))
 
 class SenderThreadPool:
     """A simple single-producer multi-consumer thread pool to send batches.
