@@ -7,6 +7,10 @@
 const async = require('async')
 const crypto = require('crypto')
 const is = require('check-types')
+const logger = require('pino')({
+  // https://cloud.google.com/logging/docs/agent/configuration#timestamp-processing
+  timestamp: () => `,"time":"${(Date.now() / 1000.0).toFixed(3)}000000"`
+})
 const { lookup } = require('lookup-dns-cache')
 const { PubSub } = require('@google-cloud/pubsub')
 const request = require('request-promise')
@@ -14,7 +18,7 @@ const request = require('request-promise')
 const { AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, PUBSUB_TOPIC, PUBSUB_SUBSCRIPTION } = process.env
 
 if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! PUBSUB_PROJECT || ! PUBSUB_TOPIC || ! PUBSUB_SUBSCRIPTION) {
-  console.log(timestamp(), 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, PUBSUB_TOPIC and PUBSUB_SUBSCRIPTION environment variables')
+  logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, PUBSUB_TOPIC and PUBSUB_SUBSCRIPTION environment variables')
   process.exit(1)
 }
 
@@ -82,7 +86,7 @@ const MESSAGES = new Map()
 
 main()
   .catch(error => {
-    console.log(timestamp(), error.stack)
+    logger.fatal({ type: 'main.error', error }, 'Main function error')
     process.exit(1)
   })
 
@@ -114,17 +118,13 @@ async function main () {
   })
 
   subscription.on('error', error => {
-    console.log(timestamp(), error.stack)
+    logger.error({ type: 'subscription.error', error }, 'Subscription error')
   })
 
   subscription.on('close', () => {
-    console.log(timestamp(), 'Error: subscription closed')
+    logger.fatal({ type: 'subscription.close' }, 'Subscription closed')
     process.exit(1)
   })
-}
-
-function timestamp () {
-  return new Date().toISOString()
 }
 
 function setupCargo (endpoint, key) {
@@ -132,9 +132,9 @@ function setupCargo (endpoint, key) {
     try {
       await sendPayload(payload, endpoint, key)
       clearMessages(payload, message => message.ack())
-      console.log(timestamp(), 'Success!', endpoint, payload.length)
+      logger.info({ type: 'events.processed', endpoint, count: payload.length }, 'Events processed')
     } catch (error) {
-      console.log(timestamp(), endpoint, error.stack)
+      logger.error({ type: 'events.error', endpoint, error, count: payload.length }, 'Events error')
       clearMessages(payload, message => message.nack(), true)
     }
   }, MAX_EVENTS_PER_BATCH)
@@ -148,7 +148,7 @@ function processMessage (cargo, message) {
   const { httpapi, identify } = parseMessage(message)
 
   if (message.publishTime < Date.now() - WARNING_THRESHOLD) {
-    console.log(timestamp(), 'Warning: Old message', { httpapi, identify })
+    logger.warn({ type: 'events.old', httpapi, identify, pubsub_message: { publishTime: message.publishTime }}, 'Old message')
   }
 
   if (httpapi) {
@@ -185,7 +185,7 @@ function parseMessage (message) {
   }
 
   if (! isEventOk(event)) {
-    console.log(timestamp(), 'Warning: Skipping malformed event', event)
+    logger.warn({ type: 'event.malformed', event }, 'Skipping malformed event')
     return {}
   }
 
@@ -310,6 +310,6 @@ function clearMessages (payload, action, forceAction = false) {
 }
 
 function onTimeout () {
-  console.log(timestamp(), `Error: no messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
+  logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
   process.exit(1)
 }
