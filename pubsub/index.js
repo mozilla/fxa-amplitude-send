@@ -100,6 +100,12 @@ async function main () {
   const [ exists ] = await subscraption.exists()
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
+  subscription.setOptions({
+    ackDeadline: 60,
+    flowControl: {
+      maxExtension: 5 * 60
+    }
+  })
 
   const cargo = {
     httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API),
@@ -135,7 +141,8 @@ function setupCargo (endpoint, key) {
       logger.info({ type: 'events.processed', endpoint, count: payload.length }, 'Events processed')
     } catch (error) {
       logger.error({ type: 'events.error', endpoint, error, count: payload.length }, 'Events error')
-      clearMessages(payload, message => message.nack(), true)
+      // Smear nacks over 5 minute period
+      clearMessages(payload, message => message.nack(60 + (Math.random() * 240)), true)
     }
   }, MAX_EVENTS_PER_BATCH)
 
