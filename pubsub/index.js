@@ -82,7 +82,7 @@ async function main () {
       }
 
       return event
-    })
+    }).filter(message => !!message)
 
     // Filter out exact duplicate identify events to help prevent rate limiting
     identify_events = identify_events.filter((outer_event, index, self) => {
