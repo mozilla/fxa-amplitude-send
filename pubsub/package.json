@@ -2,10 +2,13 @@
   "name": "fxa-amplitude-pubsub",
   "version": "0.0.0",
   "dependencies": {
-    "@google-cloud/pubsub": "^0.29.1",
+    "@google-cloud/pubsub": "^1.1.6-beta.0",
     "async": "^2.6.2",
+    "async-retry": "^1.2.3",
     "check-types": "^8.0.2",
+    "fast-deep-equal": "^2.0.1",
     "lookup-dns-cache": "^2.1.0",
+    "pino": "^5.14.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.4"
   },
