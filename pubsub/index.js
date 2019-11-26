@@ -17,10 +17,10 @@ const { PubSub } = require('@google-cloud/pubsub')
 const request = require('request-promise')
 const retry = require('async-retry')
 
-const { AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, PUBSUB_PROJECT, PUBSUB_TOPIC, PUBSUB_SUBSCRIPTION } = process.env
+const { AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, MAX_RUN_TIME, PUBSUB_PROJECT, PUBSUB_TOPIC, PUBSUB_SUBSCRIPTION } = process.env
 
-if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! PUBSUB_PROJECT || ! PUBSUB_SUBSCRIPTION || ! PUBSUB_TOPIC) {
-  logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, PUBSUB_TOPIC and PUBSUB_SUBSCRIPTION environment variables')
+if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! MAX_EVENTS_PER_BATCH || ! MAX_RUN_TIME || ! PUBSUB_PROJECT || ! PUBSUB_SUBSCRIPTION || ! PUBSUB_TOPIC) {
+  logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, MAX_RUN_TIME, PUBSUB_PROJECT, PUBSUB_TOPIC and PUBSUB_SUBSCRIPTION environment variables')
   process.exit(1)
 }
 
@@ -157,7 +157,7 @@ async function main () {
 
   setTimeout(() => {
     subscription.close();
-  }, 60000);
+  }, MAX_RUN_TIME);
 }
 
 main()
