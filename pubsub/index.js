@@ -80,8 +80,11 @@ const KEYS = {
 
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
 const IDENTIFY_VERBS_SET = new Set(IDENTIFY_VERBS)
-const MAX_EVENTS_PER_BATCH = 10
-const WORKER_COUNT = process.env.WORKER_COUNT ? parseInt(process.env.WORKER_COUNT) : 1
+const HTTP_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 10;
+// Note, defaulting the batch size to 1, not 10.
+const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_EVENTS_PER_BATCH, 10) || 1;
+const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
+const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
 const MESSAGES = new Map()
 
 main()
@@ -108,8 +111,8 @@ async function main () {
   })
 
   const cargo = {
-    httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API),
-    identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API),
+    httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
+    identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
   }
 
   let timeout;
@@ -133,7 +136,7 @@ async function main () {
   })
 }
 
-function setupCargo (endpoint, key) {
+function setupCargo (endpoint, key, maxBatchSize, workerCount) {
   const cargo = async.cargo(async payload => {
     try {
       await sendPayload(payload, endpoint, key)
@@ -144,9 +147,9 @@ function setupCargo (endpoint, key) {
       // Smear nacks over 5 minute period
       clearMessages(payload, message => message.nack(60 + (Math.random() * 240)), true)
     }
-  }, MAX_EVENTS_PER_BATCH)
+  }, maxBatchSize)
 
-  cargo.concurrency = WORKER_COUNT
+  cargo.concurrency = workerCount;
 
   return cargo
 }
