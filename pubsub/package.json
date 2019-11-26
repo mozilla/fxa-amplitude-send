@@ -6,6 +6,7 @@
     "async": "^2.6.2",
     "check-types": "^8.0.2",
     "lookup-dns-cache": "^2.1.0",
+    "pino": "^5.14.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.4"
   },
