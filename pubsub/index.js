@@ -69,20 +69,24 @@ if (process.env.IGNORED_EVENTS) {
 }
 
 const ENDPOINTS = {
+  BATCH_API: 'https://api.amplitude.com/batch',
   HTTP_API: 'https://api.amplitude.com/httpapi',
   IDENTIFY_API: 'https://api.amplitude.com/identify',
 }
 
 const KEYS = {
+  BATCH_API: 'events',
   HTTP_API: 'event',
   IDENTIFY_API: 'identification',
 }
 
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
 const IDENTIFY_VERBS_SET = new Set(IDENTIFY_VERBS)
+const BATCH_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.BATCH_API_MAX_EVENTS_PER_BATCH, 10) || 1000;
 const HTTP_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 10;
 // Note, defaulting the batch size to 1, not 10.
 const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_EVENTS_PER_BATCH, 10) || 1;
+const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
 const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
 const MESSAGES = new Map()
@@ -111,6 +115,7 @@ async function main () {
   })
 
   const cargo = {
+    batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
     httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
     identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
   }
@@ -139,11 +144,11 @@ async function main () {
 function setupCargo (endpoint, key, maxBatchSize, workerCount) {
   const cargo = async.cargo(async payload => {
     try {
-      await sendPayload(payload, endpoint, key)
+      let resp = await sendPayload(payload, endpoint, key)
       clearMessages(payload, message => message.ack())
-      logger.info({ type: 'events.processed', endpoint, count: payload.length }, 'Events processed')
+      logger.info({ type: 'events.processed', endpoint, count: payload.length, response: resp }, 'Events processed')
     } catch (error) {
-      logger.error({ type: 'events.error', endpoint, error, count: payload.length }, 'Events error')
+      logger.error({ type: 'events.error', endpoint, error, count: payload.length, response: resp }, 'Events error')
       // Smear nacks over 5 minute period
       clearMessages(payload, message => message.nack(60 + (Math.random() * 240)), true)
     }
@@ -161,13 +166,14 @@ function processMessage (cargo, message) {
     logger.warn({ type: 'events.old', httpapi, identify, pubsub_message: { publishTime: message.publishTime }}, 'Old message')
   }
 
-  if (httpapi) {
-    MESSAGES.set(httpapi.insert_id, { message, payloadCount: identify ? 2 : 1 })
-    cargo.httpapi.push(httpapi)
+  // Send identify event first, so that user_properties are updated before the event is ingested
+  if (identify) {
+    cargo.batch.push(identify)
   }
 
-  if (identify) {
-    cargo.identify.push(identify)
+  if (httpapi) {
+    MESSAGES.set(httpapi.insert_id, { message, payloadCount: identify ? 2 : 1  })
+    cargo.batch.push(httpapi)
   }
 }
 
@@ -196,6 +202,7 @@ function parseMessage (message) {
 
   if (! isEventOk(event)) {
     logger.warn({ type: 'event.malformed', event }, 'Skipping malformed event')
+    message.ack()
     return {}
   }
 
@@ -209,6 +216,7 @@ function parseMessage (message) {
   if (IDENTIFY_VERBS.some(verb => is.assigned(event.user_properties[verb]))) {
     identify = {
       device_id: event.device_id,
+      event_type: '$identify',
       user_id: event.user_id,
       user_properties: splitIdentifyPayload(event.user_properties),
       // _insert_id is only here so we can uniquely identify each payload and
@@ -286,9 +294,10 @@ function sendPayload (payload, endpoint, key) {
   return request(endpoint, {
     method: 'POST',
     lookup,
-    formData: {
+    json: true,
+    body: {
       api_key: AMPLITUDE_API_KEY,
-      [key]: JSON.stringify(payload.map(item => ({ ...item, _insert_id: undefined })))
+      [key]: payload.map(item => ({ ...item, _insert_id: undefined }))
     },
     timeout: 5 * 1000
   })
