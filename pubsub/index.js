@@ -128,6 +128,12 @@ async function main () {
     identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
   }
 
+  async function onTimeout () {
+    logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
+    await subscription.close()
+    subscription.open()
+  }
+
   let timeout;
 
   subscription.on('message', message => {
@@ -145,7 +151,6 @@ async function main () {
 
   subscription.on('close', () => {
     logger.fatal({ type: 'subscription.close' }, 'Subscription closed')
-    process.exit(1)
   })
 }
 
@@ -334,9 +339,4 @@ function clearMessages (payload, action, forceAction = false) {
       MESSAGES.set(id, { message, payloadCount: payloadCount - 1 })
     }
   })
-}
-
-function onTimeout () {
-  logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
-  process.exit(1)
 }
