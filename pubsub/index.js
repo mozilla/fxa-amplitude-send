@@ -89,6 +89,10 @@ const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_
 const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
 const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
+
+const ALLOW_EXCESS_MESSAGES = process.env.ALLOW_EXCESS_MESSAGES === 'true' || false
+const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES, 10) || 1000
+
 const MESSAGES = new Map()
 
 main()
@@ -107,6 +111,12 @@ async function main () {
   const [ exists ] = await subscraption.exists()
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
+  subscription.setOptions({
+    flowControl: {
+      allowExcessMessages: ALLOW_EXCESS_MESSAGES,
+      maxMessages: MAX_MESSAGES
+    }
+  })
 
   const cargo = {
     batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
