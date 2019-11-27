@@ -172,7 +172,7 @@ function processMessage (cargo, message) {
   }
 
   if (httpapi) {
-    MESSAGES.set(httpapi.insert_id, { message, payloadCount: 1 })
+    MESSAGES.set(httpapi.insert_id, { message, payloadCount: identify ? 2 : 1  })
     cargo.batch.push(httpapi)
   }
 }
