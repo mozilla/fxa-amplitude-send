@@ -144,11 +144,11 @@ async function main () {
 function setupCargo (endpoint, key, maxBatchSize, workerCount) {
   const cargo = async.cargo(async payload => {
     try {
-      await sendPayload(payload, endpoint, key)
+      let resp = await sendPayload(payload, endpoint, key)
       clearMessages(payload, message => message.ack())
-      logger.info({ type: 'events.processed', endpoint, count: payload.length }, 'Events processed')
+      logger.info({ type: 'events.processed', endpoint, count: payload.length, response: resp }, 'Events processed')
     } catch (error) {
-      logger.error({ type: 'events.error', endpoint, error, count: payload.length }, 'Events error')
+      logger.error({ type: 'events.error', endpoint, error, count: payload.length, response: resp }, 'Events error')
       // Smear nacks over 5 minute period
       clearMessages(payload, message => message.nack(60 + (Math.random() * 240)), true)
     }
