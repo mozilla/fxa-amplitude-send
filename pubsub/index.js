@@ -107,12 +107,6 @@ async function main () {
   const [ exists ] = await subscraption.exists()
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
-  subscription.setOptions({
-    ackDeadline: 60,
-    flowControl: {
-      maxExtension: 5 * 60
-    }
-  })
 
   const cargo = {
     batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
