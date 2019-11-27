@@ -130,7 +130,11 @@ async function main () {
 
   async function onTimeout () {
     logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
-    await subscription.close()
+    try {
+      await subscription.close()
+    } catch (error) {
+      logger.fatal({ type: 'process.timeout.error', error })
+    }
     subscription.open()
   }
 
