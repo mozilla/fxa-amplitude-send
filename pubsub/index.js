@@ -68,23 +68,10 @@ if (process.env.IGNORED_EVENTS) {
   })
 }
 
-const ENDPOINTS = {
-  HTTP_API: 'https://api.amplitude.com/httpapi',
-  IDENTIFY_API: 'https://api.amplitude.com/identify',
-}
-
-const KEYS = {
-  HTTP_API: 'event',
-  IDENTIFY_API: 'identification',
-}
-
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
 const IDENTIFY_VERBS_SET = new Set(IDENTIFY_VERBS)
-const HTTP_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 10;
-// Note, defaulting the batch size to 1, not 10.
-const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_EVENTS_PER_BATCH, 10) || 1;
-const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
-const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
+const BATCH_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 1000;
+const BATCH_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const MESSAGES = new Map()
 
 main()
@@ -111,8 +98,7 @@ async function main () {
   })
 
   const cargo = {
-    httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
-    identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
+    batch: setupCargo('https://api.amplitude.com/batch', 'events', BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
   }
 
   let timeout;
@@ -161,13 +147,14 @@ function processMessage (cargo, message) {
     logger.warn({ type: 'events.old', httpapi, identify, pubsub_message: { publishTime: message.publishTime }}, 'Old message')
   }
 
-  if (httpapi) {
-    MESSAGES.set(httpapi.insert_id, { message, payloadCount: identify ? 2 : 1 })
-    cargo.httpapi.push(httpapi)
+  // Send identify event first, so that user_properties are updated before the event is ingested
+  if (identify) {
+    cargo.batch.push(identify)
   }
 
-  if (identify) {
-    cargo.identify.push(identify)
+  if (httpapi) {
+    MESSAGES.set(httpapi.insert_id, { message, payloadCount: 1 })
+    cargo.batch.push(httpapi)
   }
 }
 
@@ -196,6 +183,7 @@ function parseMessage (message) {
 
   if (! isEventOk(event)) {
     logger.warn({ type: 'event.malformed', event }, 'Skipping malformed event')
+    message.ack()
     return {}
   }
 
@@ -209,11 +197,9 @@ function parseMessage (message) {
   if (IDENTIFY_VERBS.some(verb => is.assigned(event.user_properties[verb]))) {
     identify = {
       device_id: event.device_id,
+      event_type: '$identify',
       user_id: event.user_id,
       user_properties: splitIdentifyPayload(event.user_properties),
-      // _insert_id is only here so we can uniquely identify each payload and
-      // link it back to its message. It's not actually sent to Amplitude.
-      _insert_id: event.insert_id,
     }
   }
 
@@ -286,9 +272,10 @@ function sendPayload (payload, endpoint, key) {
   return request(endpoint, {
     method: 'POST',
     lookup,
-    formData: {
+    json: true,
+    body: {
       api_key: AMPLITUDE_API_KEY,
-      [key]: JSON.stringify(payload.map(item => ({ ...item, _insert_id: undefined })))
+      [key]: payload
     },
     timeout: 5 * 1000
   })
@@ -297,7 +284,7 @@ function sendPayload (payload, endpoint, key) {
 function clearMessages (payload, action, forceAction = false) {
   payload.forEach(event => {
     // eslint-disable-next-line no-underscore-dangle
-    const id = event.insert_id || event._insert_id
+    const id = event.insert_id
 
     const item = MESSAGES.get(id)
     if (! item) {
