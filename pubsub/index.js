@@ -68,10 +68,27 @@ if (process.env.IGNORED_EVENTS) {
   })
 }
 
+const ENDPOINTS = {
+  BATCH_API: 'https://api.amplitude.com/batch',
+  HTTP_API: 'https://api.amplitude.com/httpapi',
+  IDENTIFY_API: 'https://api.amplitude.com/identify',
+}
+
+const KEYS = {
+  BATCH_API: 'events',
+  HTTP_API: 'event',
+  IDENTIFY_API: 'identification',
+}
+
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
 const IDENTIFY_VERBS_SET = new Set(IDENTIFY_VERBS)
 const BATCH_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.BATCH_API_MAX_EVENTS_PER_BATCH, 10) || 1000;
+const HTTP_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 10;
+// Note, defaulting the batch size to 1, not 10.
+const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_EVENTS_PER_BATCH, 10) || 1;
 const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
+const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
+const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
 const MESSAGES = new Map()
 
 main()
@@ -98,7 +115,9 @@ async function main () {
   })
 
   const cargo = {
-    batch: setupCargo('https://api.amplitude.com/batch', 'events', BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
+    batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
+    httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
+    identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
   }
 
   let timeout;
