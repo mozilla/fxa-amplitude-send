@@ -182,6 +182,7 @@ function processMessage (cargo, message) {
   //  and Math.random values from 0.75 to 1 => use identify API.
   if (identify) {
     if (Math.floor(Math.random() * 100) < BATCH_API_PERCENTAGE) {
+      identify.event_type = "$identify";
       cargo.batch.push(identify);
     } else {
       cargo.identify.push(identify);
