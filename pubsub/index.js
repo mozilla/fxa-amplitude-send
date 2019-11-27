@@ -89,6 +89,12 @@ const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_
 const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
 const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
+
+const ACK_DEADLINE = parseInt(process.env.ACK_DEADLINE, 10) || 60
+const ALLOW_EXCESS_MESSAGES = process.env.ALLOW_EXCESS_MESSAGES === 'true' || false
+const MAX_EXTENSION = parseInt(process.env.MAX_EXTENSION, 10) || 5 * 60
+const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES, 10) || 1000
+
 const MESSAGES = new Map()
 
 main()
@@ -108,9 +114,11 @@ async function main () {
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
   subscription.setOptions({
-    ackDeadline: 60,
+    ackDeadline: ACK_DEADLINE,
     flowControl: {
-      maxExtension: 5 * 60
+      allowExcessMessages: ALLOW_EXCESS_MESSAGES,
+      maxExtension: MAX_EXTENSION,
+      maxMessages: MAX_MESSAGES,
     }
   })
 
@@ -118,6 +126,16 @@ async function main () {
     batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
     httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
     identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
+  }
+
+  async function onTimeout () {
+    logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
+    try {
+      await subscription.close()
+    } catch (error) {
+      logger.fatal({ type: 'process.timeout.error', error })
+    }
+    subscription.open()
   }
 
   let timeout;
@@ -137,7 +155,6 @@ async function main () {
 
   subscription.on('close', () => {
     logger.fatal({ type: 'subscription.close' }, 'Subscription closed')
-    process.exit(1)
   })
 }
 
@@ -326,9 +343,4 @@ function clearMessages (payload, action, forceAction = false) {
       MESSAGES.set(id, { message, payloadCount: payloadCount - 1 })
     }
   })
-}
-
-function onTimeout () {
-  logger.fatal({ type: 'process.timeout' }, `No messages received in ${TIMEOUT_THRESHOLD / SECOND} seconds`)
-  process.exit(1)
 }
