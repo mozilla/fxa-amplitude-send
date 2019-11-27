@@ -71,11 +71,13 @@ if (process.env.IGNORED_EVENTS) {
 const ENDPOINTS = {
   HTTP_API: 'https://api.amplitude.com/httpapi',
   IDENTIFY_API: 'https://api.amplitude.com/identify',
+  BATCH_API: 'https://api.amplitude.com/batch',
 }
 
 const KEYS = {
   HTTP_API: 'event',
   IDENTIFY_API: 'identification',
+  BATCH_API: 'events',
 }
 
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
@@ -85,6 +87,13 @@ const HTTP_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_P
 const IDENTIFY_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.IDENTIFY_API_MAX_EVENTS_PER_BATCH, 10) || 1;
 const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
+const BATCH_API_MAX_EVENTS_PER_BATCH =  parseInt(process.env.BATCH_API_MAX_EVENTS_PER_BATCH, 10) || 10;
+const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
+
+// Integer from 0 to 100, determines percentage of 'identify' events sent through batch API.
+let BATCH_API_PERCENTAGE = parseInt(process.env.BATCH_API_PERCENTAGE, 10) || 75;
+
+
 const MESSAGES = new Map()
 
 main()
@@ -113,6 +122,7 @@ async function main () {
   const cargo = {
     httpapi: setupCargo(ENDPOINTS.HTTP_API, KEYS.HTTP_API, HTTP_API_MAX_EVENTS_PER_BATCH, HTTP_API_WORKER_COUNT),
     identify: setupCargo(ENDPOINTS.IDENTIFY_API, KEYS.IDENTIFY_API, IDENTIFY_API_MAX_EVENTS_PER_BATCH, IDENTIFY_API_WORKER_COUNT),
+    batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
   }
 
   let timeout;
@@ -166,8 +176,16 @@ function processMessage (cargo, message) {
     cargo.httpapi.push(httpapi)
   }
 
+  // Batch API percentage is an integer from 0 to 100.
+  // If batch API percentage = 75,
+  // then Math.random values from 0 to 0.75 => use batch API,
+  //  and Math.random values from 0.75 to 1 => use identify API.
   if (identify) {
-    cargo.identify.push(identify)
+    if (Math.floor(Math.random() * 100) < BATCH_API_PERCENTAGE) {
+      cargo.batch.push(identify);
+    } else {
+      cargo.identify.push(identify);
+    }
   }
 }
 
