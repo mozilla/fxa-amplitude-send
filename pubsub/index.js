@@ -219,6 +219,9 @@ function parseMessage (message) {
       event_type: '$identify',
       user_id: event.user_id,
       user_properties: splitIdentifyPayload(event.user_properties),
+      // _insert_id is only here so we can uniquely identify each payload and
+      // link it back to its message. It's not actually sent to Amplitude.
+      _insert_id: event.insert_id,
     }
   }
 
@@ -294,7 +297,7 @@ function sendPayload (payload, endpoint, key) {
     json: true,
     body: {
       api_key: AMPLITUDE_API_KEY,
-      [key]: payload
+      [key]: payload.map(item => ({ ...item, _insert_id: undefined }))
     },
     timeout: 5 * 1000
   })
@@ -303,7 +306,7 @@ function sendPayload (payload, endpoint, key) {
 function clearMessages (payload, action, forceAction = false) {
   payload.forEach(event => {
     // eslint-disable-next-line no-underscore-dangle
-    const id = event.insert_id
+    const id = event.insert_id || event._insert_id
 
     const item = MESSAGES.get(id)
     if (! item) {
