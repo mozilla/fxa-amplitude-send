@@ -70,8 +70,8 @@ if (process.env.IGNORED_EVENTS) {
 
 const IDENTIFY_VERBS = [ '$set', '$setOnce', '$add', '$append', '$unset' ]
 const IDENTIFY_VERBS_SET = new Set(IDENTIFY_VERBS)
-const BATCH_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.HTTP_API_MAX_EVENTS_PER_BATCH, 10) || 1000;
-const BATCH_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
+const BATCH_API_MAX_EVENTS_PER_BATCH = parseInt(process.env.BATCH_API_MAX_EVENTS_PER_BATCH, 10) || 1000;
+const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) || 1;
 const MESSAGES = new Map()
 
 main()
