@@ -90,7 +90,9 @@ const BATCH_API_WORKER_COUNT = parseInt(process.env.BATCH_API_WORKER_COUNT, 10) 
 const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) || 1;
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
 
+const ACK_DEADLINE = parseInt(process.env.ACK_DEADLINE, 10) || 60
 const ALLOW_EXCESS_MESSAGES = process.env.ALLOW_EXCESS_MESSAGES === 'true' || false
+const MAX_EXTENSION = parseInt(process.env.MAX_EXTENSION, 10) || 5 * 60
 const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES, 10) || 1000
 
 const MESSAGES = new Map()
@@ -112,9 +114,11 @@ async function main () {
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
   subscription.setOptions({
+    ackDeadline: ACK_DEADLINE,
     flowControl: {
       allowExcessMessages: ALLOW_EXCESS_MESSAGES,
-      maxMessages: MAX_MESSAGES
+      maxExtension: MAX_EXTENSION,
+      maxMessages: MAX_MESSAGES,
     }
   })
 
