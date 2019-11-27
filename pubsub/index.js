@@ -302,15 +302,31 @@ function splitIdentifyPayload (properties) {
 }
 
 function sendPayload (payload, endpoint, key) {
-  return request(endpoint, {
-    method: 'POST',
-    lookup,
-    formData: {
-      api_key: AMPLITUDE_API_KEY,
-      [key]: JSON.stringify(payload.map(item => ({ ...item, _insert_id: undefined })))
-    },
-    timeout: 5 * 1000
-  })
+  if (endpoint === ENDPOINTS.BATCH_API) {
+    return request(endpoint, {
+      method: 'POST',
+      lookup,
+      json: true,
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        api_key: AMPLITUDE_API_KEY,
+        [key]: JSON.stringify(payload.map(item => ({ ...item, _insert_id: undefined })))
+      },
+      timeout: 5 * 1000 // TODO: should this be configurable?
+    })
+  } else {
+    return request(endpoint, {
+      method: 'POST',
+      lookup,
+      formData: {
+        api_key: AMPLITUDE_API_KEY,
+        [key]: JSON.stringify(payload.map(item => ({ ...item, _insert_id: undefined })))
+      },
+      timeout: 5 * 1000
+    })
+  }
 }
 
 function clearMessages (payload, action, forceAction = false) {
