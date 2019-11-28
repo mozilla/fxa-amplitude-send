@@ -113,14 +113,6 @@ async function main () {
   const [ exists ] = await subscraption.exists()
 
   const [ subscription ] = await (exists ? subscraption.get(PUBSUB_SUBSCRIPTION) : subscraption.create(PUBSUB_SUBSCRIPTION))
-  subscription.setOptions({
-    ackDeadline: ACK_DEADLINE,
-    flowControl: {
-      allowExcessMessages: ALLOW_EXCESS_MESSAGES,
-      maxExtension: MAX_EXTENSION,
-      maxMessages: MAX_MESSAGES,
-    }
-  })
 
   const cargo = {
     batch: setupCargo(ENDPOINTS.BATCH_API, KEYS.BATCH_API, BATCH_API_MAX_EVENTS_PER_BATCH, BATCH_API_WORKER_COUNT),
@@ -135,7 +127,7 @@ async function main () {
     } catch (error) {
       logger.fatal({ type: 'process.timeout.error', error })
     }
-    subscription.open()
+    //subscription.open()
   }
 
   let timeout;
