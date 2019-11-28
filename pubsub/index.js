@@ -6,6 +6,7 @@
 
 const async = require('async')
 const crypto = require('crypto')
+const grpc = require ('grpc')
 const is = require('check-types')
 const logger = require('pino')({
   // https://cloud.google.com/logging/docs/agent/configuration#timestamp-processing
@@ -105,6 +106,7 @@ main()
 
 async function main () {
   const pubsub = new PubSub({
+    grpc,
     projectId: PUBSUB_PROJECT
   })
 
