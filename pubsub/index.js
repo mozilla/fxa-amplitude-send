@@ -6,6 +6,7 @@
 
 const async = require('async')
 const crypto = require('crypto')
+const grpc = require ('grpc')
 const is = require('check-types')
 const logger = require('pino')({
   // https://cloud.google.com/logging/docs/agent/configuration#timestamp-processing
@@ -91,7 +92,8 @@ const HTTP_API_WORKER_COUNT = parseInt(process.env.HTTP_API_WORKER_COUNT, 10) ||
 const IDENTIFY_API_WORKER_COUNT = parseInt(process.env.IDENTIFY_API_WORKER_COUNT, 10) || 1;
 
 const ACK_DEADLINE = parseInt(process.env.ACK_DEADLINE, 10) || 60
-const ALLOW_EXCESS_MESSAGES = process.env.ALLOW_EXCESS_MESSAGES === 'true' || false
+const ALLOW_EXCESS_MESSAGES = process.env.ALLOW_EXCESS_MESSAGES === 'true'
+const CPLUSPLUS_GRPC_LIBRARY = process.env.CPLUSPLUS_GRPC_LIBRARY === 'true'
 const MAX_EXTENSION = parseInt(process.env.MAX_EXTENSION, 10) || 5 * 60
 const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES, 10) || 1000
 
@@ -105,6 +107,7 @@ main()
 
 async function main () {
   const pubsub = new PubSub({
+    grpc: CPLUSPLUS_GRPC_LIBRARY ? grpc : null,
     projectId: PUBSUB_PROJECT
   })
 
