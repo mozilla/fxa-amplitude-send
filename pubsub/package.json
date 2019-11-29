@@ -4,6 +4,7 @@
   "dependencies": {
     "@google-cloud/pubsub": "^1.1.5",
     "async": "^2.6.2",
+    "async-retry": "^1.2.3",
     "check-types": "^8.0.2",
     "grpc": "^1.24.2",
     "lookup-dns-cache": "^2.1.0",
