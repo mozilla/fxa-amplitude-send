@@ -12,10 +12,10 @@ const PubSub = require('@google-cloud/pubsub')
 const retry = require('async-retry')
 const utils = require('./utils')
 
-const { AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, PUBSUB_PROJECT, PUBSUB_TOPIC, PUBSUB_SUBSCRIPTION } = process.env
+const { AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, PUBSUB_PROJECT, PUBSUB_SUBSCRIPTION } = process.env
 
-if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! PUBSUB_PROJECT || ! PUBSUB_SUBSCRIPTION || ! PUBSUB_TOPIC) {
-  logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, PUBSUB_TOPIC and PUBSUB_SUBSCRIPTION environment variables')
+if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! PUBSUB_PROJECT || ! PUBSUB_SUBSCRIPTION) {
+  logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, PUBSUB_PROJECT, and PUBSUB_SUBSCRIPTION environment variables')
   process.exit(1)
 }
 
