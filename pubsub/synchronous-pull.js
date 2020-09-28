@@ -93,8 +93,10 @@ async function main () {
       amplitudeResponse
     })
   }
-
-  
 }
 
 main()
+
+process.on('SIGINT', function() {
+  process.exit()
+})
