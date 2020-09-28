@@ -71,14 +71,19 @@ async function main () {
       }
     }).flat()
 
-    const amplitudeResponse = await retry(async bail => {
-      return await utils.sendMessages(messages, AMPLITUDE_API_KEY)
-    }, {
-      onRetry: error => {
-        logger.error({type: 'amplitude.batch.error', amplitudeError: error.toString(), messages, response: error })
-      },
-      retries: MAX_RETRIES,
-    })
+    try {
+      const amplitudeResponse = await retry(async bail => {
+        return await utils.sendMessages(messages, AMPLITUDE_API_KEY)
+      }, {
+        onRetry: error => {
+          logger.error({type: 'amplitude.batch.error', amplitudeError: error.toString(), messages, response: error })
+        },
+        retries: MAX_RETRIES,
+      })
+    } catch (retryErr) {
+      // Bail out of this attempt, and let pubsub redeliver the message in a few minutes
+      break;
+    }
 
     const pubsubAckRequest = {
       subscription: formattedSubscription,
