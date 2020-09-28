@@ -13,6 +13,7 @@ const retry = require('async-retry')
 const utils = require('./utils')
 
 const { AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, PUBSUB_PROJECT, PUBSUB_SUBSCRIPTION } = process.env
+const MAX_RETRIES = process.env.MAX_RETRIES ? parseInt(process.env.MAX_RETRIES, 10) : 3
 
 if (! AMPLITUDE_API_KEY || ! HMAC_KEY || ! MAX_EVENTS_PER_BATCH || ! PUBSUB_PROJECT || ! PUBSUB_SUBSCRIPTION) {
   logger.fatal({type: 'startup.error'}, 'Error: You must set AMPLITUDE_API_KEY, HMAC_KEY, MAX_EVENTS_PER_BATCH, PUBSUB_PROJECT, and PUBSUB_SUBSCRIPTION environment variables')
@@ -74,8 +75,9 @@ async function main () {
       return await utils.sendMessages(messages, AMPLITUDE_API_KEY)
     }, {
       onRetry: error => {
-        logger.error({type: 'amplitude.batch.error', amplitudeError: error.toString() })
-      }
+        logger.error({type: 'amplitude.batch.error', amplitudeError: error.toString(), messages, response: error })
+      },
+      retries: MAX_RETRIES,
     })
 
     const pubsubAckRequest = {
