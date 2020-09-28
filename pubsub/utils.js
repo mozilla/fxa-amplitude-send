@@ -6,6 +6,10 @@
 
 const crypto = require('crypto')
 const is = require('check-types')
+const logger = require('pino')({
+  // https://cloud.google.com/logging/docs/agent/configuration#timestamp-processing
+  timestamp: () => `,"time":"${(Date.now() / 1000.0).toFixed(3)}000000"`
+})
 const { lookup } = require('lookup-dns-cache')
 const request = require('request-promise')
 
@@ -49,6 +53,18 @@ function parseMessage (event, HMAC_KEY) {
 
   if (! isEventOk(event)) {
     return {}
+  }
+
+  // Work around some invalid session_ids
+  if (is.string(event.session_id)) {
+    // Try converting it to a number first
+    let new_session_id = parseInt(event.session_id, 10)
+    if (isNaN(new_session_id)) {
+      // It's a string, set session_id to -1
+      new_session_id = -1
+    }
+    logger.error({ type: 'amplitude.validation.error', new_session_id, old_session_id: event.session_id.toString() }, 'Invalid session_id')
+    event.session_id = new_session_id
   }
 
   if (event.user_id) {
